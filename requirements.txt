@@ -1,0 +1,5 @@
+numpy
+scipy
+streamlit
+plotly
+pytest
