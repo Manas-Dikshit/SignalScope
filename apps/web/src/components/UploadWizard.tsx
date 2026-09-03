@@ -56,15 +56,14 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
       const formData = new FormData();
       if (format === "sigmf") {
         formData.append("file", files[0]);
-        if (files[1]) formData.append("sigmf_meta", files[1]);
+        if (files[1]) formData.append("data_file", files[1]);
       } else {
         formData.append("file", files[0]);
       }
-      formData.append("format", format);
-      if (name) formData.append("name", name);
+      formData.append("loader", format);
       if (format === "raw_iq") {
         formData.append(
-          "raw_iq_options",
+          "raw_iq_params",
           JSON.stringify({
             dtype: rawDtype,
             layout: rawLayout,
@@ -76,7 +75,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
       }
       if (format === "wav") {
         formData.append(
-          "wav_options",
+          "wav_params",
           JSON.stringify({ stereo_mode: wavStereoMode })
         );
       }
