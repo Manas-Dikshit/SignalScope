@@ -22,15 +22,15 @@ const SOURCE_CONFIG: Record<
   unknown: { icon: "❓", label: "unknown", color: "text-gray-400" },
 };
 
-function confidenceColor(confidence: number | null): string {
-  if (confidence === null) return "";
+function confidenceColor(confidence: number | null | undefined): string {
+  if (confidence == null) return "";
   if (confidence >= 0.7) return "text-green-400";
   if (confidence >= 0.4) return "text-yellow-400";
   return "text-red-400";
 }
 
-function confidenceBg(confidence: number | null): string {
-  if (confidence === null) return "";
+function confidenceBg(confidence: number | null | undefined): string {
+  if (confidence == null) return "";
   if (confidence >= 0.7) return "bg-green-500/10 border-green-500/30";
   if (confidence >= 0.4) return "bg-yellow-500/10 border-yellow-500/30";
   return "bg-red-500/10 border-red-500/30";
