@@ -87,6 +87,7 @@ async def upload_recording(
     loader: str = Form("wav"),
     raw_iq_params: str = Form("{}"),
     wav_params: str = Form("{}"),
+    data_file: UploadFile | None = File(None),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -111,8 +112,17 @@ async def upload_recording(
     rec_id = uuid.uuid4()
     upload_dir = Path(settings.DATA_DIR) / "uploads" / str(user.id) / str(rec_id)
     upload_dir.mkdir(parents=True, exist_ok=True)
-    storage_path = upload_dir / file.filename
+    storage_path = upload_dir / _safe_filename(file.filename)
     storage_path.write_bytes(contents)
+
+    # SigMF uploads carry the .sigmf-data file in a second multipart part; store it
+    # next to the meta file so load_sigmf can find it (it looks for <base>.sigmf-data).
+    if loader == "sigmf" and data_file is not None and data_file.filename:
+        data_contents = await data_file.read()
+        if len(data_contents) > settings.MAX_UPLOAD_BYTES:
+            shutil.rmtree(upload_dir, ignore_errors=True)
+            raise HTTPException(status_code=413, detail="Data file too large")
+        (upload_dir / _safe_filename(data_file.filename)).write_bytes(data_contents)
 
     # Validate with DSP loader
     params = json.loads(raw_iq_params) if loader == "raw_iq" else json.loads(wav_params) if loader == "wav" else {}
