@@ -1,5 +1,47 @@
+# Environment / secrets
+.env
 .env.local
 .env.production
+.env.*.local
 
-node_modules
-__pycache__
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.venv/
+venv/
+*.db
+*.sqlite3
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+test_data/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+docker-data/
+
+# Upload data (runtime)
+data/uploads/
