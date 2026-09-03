@@ -21,7 +21,7 @@ import { PlotlyChart } from "@/components/PlotlyChart";
 import { downsamplePair, downsample } from "@/lib/utils";
 import { Upload, FileAudio, Check, X, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import type { Data } from "plotly.js-dist-min";
+import type { PlotData } from "plotly.js-dist-min";
 
 type Step = "select" | "format" | "preview" | "done";
 type FileFormat = "wav" | "raw_iq" | "sigmf";
@@ -158,7 +158,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
     files.length > 0 &&
     (format !== "sigmf" || files.length >= 2);
 
-  const waveformPlotData: Data[] = previewData
+  const waveformPlotData: PlotData[] = previewData
     ? [
         {
           x: previewData.samples_imag.map((_, i) =>
@@ -187,7 +187,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
       ]
     : [];
 
-  const scatterPlotData: Data[] = previewData
+  const scatterPlotData: PlotData[] = previewData
     ? [
         {
           x: previewData.samples_real,
