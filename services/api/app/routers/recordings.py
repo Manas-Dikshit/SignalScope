@@ -83,10 +83,10 @@ def _persist_metadata(db: AsyncSession, recording_id: uuid.UUID, rec):
 
 @router.post("/upload", response_model=RecordingUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_recording(
-    file: UploadFile,
-    loader: str = "wav",
-    raw_iq_params: str = "{}",
-    wav_params: str = "{}",
+    file: UploadFile = File(...),
+    loader: str = Form("wav"),
+    raw_iq_params: str = Form("{}"),
+    wav_params: str = Form("{}"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -99,7 +99,6 @@ async def upload_recording(
         raise HTTPException(status_code=413, detail="File too large")
 
     file_hash = hashlib.sha256(contents).hexdigest()
-    print(f"[DEBUG] loader={loader!r} raw_iq_params={raw_iq_params!r} wav_params={wav_params!r}", flush=True)
 
     # Duplicate check for this user
     existing = await db.execute(
