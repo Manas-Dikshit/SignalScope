@@ -29,7 +29,8 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
     await db.refresh(user)
 
     token = create_access_token(str(user.id))
-    return Token(access_token=token)
+    user_resp = UserResponse.model_validate(user)
+    return Token(access_token=token, user=user_resp)
 
 
 @router.post("/login", response_model=Token)
@@ -40,6 +41,7 @@ async def login(body: UserLogin, response: Response, db: AsyncSession = Depends(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
     token = create_access_token(str(user.id))
+    user_resp = UserResponse.model_validate(user)
     response.set_cookie(
         key="access_token",
         value=token,
@@ -48,7 +50,7 @@ async def login(body: UserLogin, response: Response, db: AsyncSession = Depends(
         samesite="lax",
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
-    return Token(access_token=token)
+    return Token(access_token=token, user=user_resp)
 
 
 @router.post("/logout")

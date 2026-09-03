@@ -17,58 +17,78 @@ export interface Estimate {
   warnings: string[];
 }
 
-export interface RecordingMetadata {
-  sample_rate: Estimate;
-  center_frequency: Estimate | null;
-  is_complex: boolean;
+export interface RecordingMeta {
+  id: string;
+  recording_id: string;
+  sample_rate: number | null;
+  center_frequency: number | null;
+  data_type: string | null;
+  iq_layout: string | null;
+  endian: string | null;
   channel_count: number;
-  sample_dtype: string;
-  duration_seconds: number | null;
-  total_samples: number;
-  extra: Record<string, unknown>;
+  sample_width: string | null;
+  is_complex: boolean;
+  metadata_source: string | null;
+  metadata_confidence: number | null;
+  raw_metadata_json: Record<string, unknown> | null;
+  created_at: string;
 }
 
 export interface Recording {
   id: string;
-  filename: string;
-  name: string;
-  format: string;
+  original_filename: string;
+  file_hash: string;
   file_size: number;
+  file_format: string;
+  uploaded_by: string;
+  status: string;
+  duration_seconds: number | null;
+  total_samples: number | null;
   created_at: string;
-  metadata: RecordingMetadata;
-  user_id: string;
+  updated_at: string;
+  metadata_entry: RecordingMeta | null;
 }
 
 export interface PreviewData {
-  waveform: { time: number[]; real: number[]; imag: number[] };
-  psd: { frequency: number[]; power: number[] };
-  waterfall: {
-    frequency: number[];
-    time: number[];
-    spectrogram: number[][];
-  };
-  scatter: { real: number[]; imag: number[] };
+  samples_real: number[];
+  samples_imag: number[];
+  sample_rate: number | null;
+  total_samples: number;
+  preview_count: number;
+  stats: { peak_amplitude: number; rms_amplitude: number };
 }
 
 export interface Project {
   id: string;
   name: string;
+  description: string | null;
   recording_id: string;
-  recording: Recording | null;
+  created_by: string;
+  status: string;
+  selected_start_sample: number | null;
+  selected_end_sample: number | null;
   created_at: string;
   updated_at: string;
-  parameter_estimates: Estimate[];
-  status: "idle" | "analyzing" | "completed" | "failed";
+}
+
+export interface ParameterEstimate {
+  id: string;
+  project_id: string;
+  parameter_name: string;
+  value_json: Record<string, unknown>;
+  value_type: string;
+  confidence: number | null;
+  evidence_json: Record<string, unknown> | null;
+  source: string;
+  created_at: string;
 }
 
 export interface Job {
   id: string;
-  status: "pending" | "running" | "completed" | "failed";
-  project_id: string;
-  created_at: string;
-  updated_at: string;
-  result: Record<string, unknown> | null;
-  error: string | null;
+  status: string;
+  progress_percent: number;
+  current_stage: string | null;
+  error_message: string | null;
 }
 
 export interface DashboardStats {
@@ -82,11 +102,15 @@ export interface DashboardStats {
 export interface User {
   id: string;
   email: string;
+  display_name: string | null;
+  role: string;
+  is_active: boolean;
 }
 
 export interface AuthResponse {
-  user: User;
   access_token: string;
+  token_type: string;
+  user: User;
 }
 
 export interface RawIQOptions {

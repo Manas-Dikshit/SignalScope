@@ -4,6 +4,7 @@ import type {
   Recording,
   PreviewData,
   Project,
+  ParameterEstimate,
   Job,
   DashboardStats,
 } from "./types";
@@ -52,7 +53,12 @@ export const authApi = {
 };
 
 export const recordingsApi = {
-  list: () => request<Recording[]>("/api/recordings"),
+  list: async (): Promise<Recording[]> => {
+    const res = await request<{ items: Recording[]; total: number }>(
+      "/api/recordings"
+    );
+    return res.items;
+  },
 
   get: (id: string) => request<Recording>(`/api/recordings/${id}`),
 
@@ -63,7 +69,7 @@ export const recordingsApi = {
     request<PreviewData>(`/api/recordings/${id}/preview`),
 
   upload: async (formData: FormData): Promise<Recording> => {
-    const url = `${API_BASE}/api/recordings`;
+    const url = `${API_BASE}/api/recordings/upload`;
     const res = await fetch(url, {
       method: "POST",
       credentials: "include",
@@ -78,15 +84,29 @@ export const recordingsApi = {
 };
 
 export const projectsApi = {
-  list: () => request<Project[]>("/api/projects"),
+  list: async (): Promise<Project[]> => {
+    const res = await request<{ items: Project[]; total: number }>(
+      "/api/projects"
+    );
+    return res.items;
+  },
 
   get: (id: string) => request<Project>(`/api/projects/${id}`),
 
-  analyze: (id: string) =>
-    request<{ job_id: string }>(`/api/projects/${id}/analyze`, {
+  create: (data: { name?: string; description?: string; recording_id: string }) =>
+    request<Project>("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     }),
+
+  analyze: (id: string) =>
+    request<Job>(`/api/projects/${id}/estimate-parameters`, {
+      method: "POST",
+    }),
+
+  parameters: (id: string) =>
+    request<ParameterEstimate[]>(`/api/projects/${id}/parameters`),
 };
 
 export const jobsApi = {
