@@ -99,6 +99,7 @@ async def upload_recording(
         raise HTTPException(status_code=413, detail="File too large")
 
     file_hash = hashlib.sha256(contents).hexdigest()
+    print(f"[DEBUG] loader={loader!r} raw_iq_params={raw_iq_params!r} wav_params={wav_params!r}", flush=True)
 
     # Duplicate check for this user
     existing = await db.execute(
