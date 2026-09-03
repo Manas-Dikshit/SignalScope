@@ -41,6 +41,12 @@ if _dsp_root not in sys.path:
 from signalscope_dsp.io import load_wav, load_raw_iq, RawIQFormat, load_sigmf  # noqa: E402
 
 
+def _safe_filename(name: str) -> str:
+    """Sanitize an uploaded filename to prevent path traversal."""
+    name = Path(name).name
+    return name or "upload"
+
+
 async def _validate_and_load(path: str, loader: str, params: dict):
     """Try loading the file with the DSP loader to validate it. Returns the Recording."""
     if loader == "wav":
@@ -183,7 +189,7 @@ async def get_recording(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Recording).where(Recording.id == recording_id))
+    result = await db.execute(select(Recording).where(Recording.id == recording_id, Recording.status != "deleted"))
     rec = result.scalar_one_or_none()
     if not rec:
         raise HTTPException(status_code=404, detail="Recording not found")
@@ -199,7 +205,7 @@ async def update_metadata(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Recording).where(Recording.id == recording_id))
+    result = await db.execute(select(Recording).where(Recording.id == recording_id, Recording.status != "deleted"))
     rec = result.scalar_one_or_none()
     if not rec:
         raise HTTPException(status_code=404, detail="Recording not found")
