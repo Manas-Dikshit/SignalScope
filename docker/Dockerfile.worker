@@ -1,0 +1,37 @@
+FROM python:3.12-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
+
+COPY services/dsp-worker/ /dsp-worker/
+RUN pip install --no-cache-dir -e /dsp-worker
+
+FROM python:3.12-slim AS runtime
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+WORKDIR /app
+
+COPY services/api/ /app/
+COPY database/migrations/ /app/alembic/
+COPY database/alembic.ini /app/alembic.ini 2>/dev/null || true
+
+RUN mkdir -p /data
+
+COPY docker/entrypoint-worker.sh /app/entrypoint-worker.sh
+RUN chmod +x /app/entrypoint-worker.sh
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD celery -A app.tasks inspect ping --timeout 5 || exit 1
+
+ENTRYPOINT ["/app/entrypoint-worker.sh"]

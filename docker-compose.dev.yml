@@ -1,0 +1,34 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    volumes:
+      - ./services/api:/app
+      - ./database/migrations:/app/alembic
+      - ./database/alembic.ini:/app/alembic.ini
+      - uploads_data:/data
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.worker
+    volumes:
+      - ./services/api:/app
+      - ./database/migrations:/app/alembic
+      - ./database/alembic.ini:/app/alembic.ini
+      - uploads_data:/data
+    command: celery -A app.tasks worker --loglevel=info --concurrency=2
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
