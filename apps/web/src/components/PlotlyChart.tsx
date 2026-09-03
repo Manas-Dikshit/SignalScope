@@ -12,7 +12,7 @@ const Plot = dynamic(() => import("react-plotly.js"), {
 });
 
 interface PlotlyChartProps {
-  data: PlotData[];
+  data: Data[];
   layout?: Record<string, unknown>;
   config?: Record<string, unknown>;
   className?: string;
@@ -51,7 +51,7 @@ export function PlotlyChart({
   return (
     <div className={className}>
       <Plot
-        data={data as PlotData[]}
+        data={data as Data[]}
         layout={defaultLayout as PlotlyLayout}
         config={defaultConfig as PlotlyConfig}
         useResizeHandler
