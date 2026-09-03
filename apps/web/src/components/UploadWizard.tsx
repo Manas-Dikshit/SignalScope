@@ -21,7 +21,7 @@ import { PlotlyChart } from "@/components/PlotlyChart";
 import { downsamplePair, downsample } from "@/lib/utils";
 import { Upload, FileAudio, Check, X, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import type { PlotData } from "plotly.js-dist-min";
+import type { Data } from "plotly.js-dist-min";
 
 type Step = "select" | "format" | "preview" | "done";
 type FileFormat = "wav" | "raw_iq" | "sigmf";

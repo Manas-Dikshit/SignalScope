@@ -145,7 +145,7 @@ export default function AnalysisWorkspacePage() {
     },
   ];
 
-  const scatterData: PlotData[] = [
+  const scatterData: Data[] = [
     {
       x: scatterDown.x,
       y: scatterDown.y,
