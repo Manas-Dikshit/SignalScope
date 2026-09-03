@@ -7,6 +7,7 @@ from .config import settings
 from .database import engine
 from .models import Base
 from .routers import auth as auth_router
+from .routers import dashboard as dashboard_router
 from .routers import jobs as jobs_router
 from .routers import projects as projects_router
 from .routers import recordings as recordings_router
@@ -29,7 +30,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 app.include_router(auth_router.router)
 app.include_router(recordings_router.router)
 app.include_router(projects_router.router)
 app.include_router(jobs_router.router)
+app.include_router(dashboard_router.router)
