@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 import sys
-import os
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 
 import numpy as np
 from celery import Celery
@@ -12,9 +12,9 @@ from celery import Celery
 from .config import settings
 
 # Make DSP modules importable
-_dsp_root = os.path.join(os.path.dirname(__file__), "..", "..", "..", "dsp-worker")
+_dsp_root = str(Path(__file__).resolve().parents[3] / "dsp-worker")
 if _dsp_root not in sys.path:
-    sys.path.insert(0, os.path.abspath(_dsp_root))
+    sys.path.insert(0, _dsp_root)
 
 celery_app = Celery(
     "signalscope",

@@ -181,10 +181,11 @@ async def detect_bursts(
     if not rec:
         raise HTTPException(status_code=404, detail="Recording not found")
 
-    import sys, os
-    _dsp_root = os.path.join(os.path.dirname(__file__), "..", "..", "..", "dsp-worker")
+    import sys
+    from pathlib import Path
+    _dsp_root = str(Path(__file__).resolve().parents[3] / "dsp-worker")
     if _dsp_root not in sys.path:
-        sys.path.insert(0, os.path.abspath(_dsp_root))
+        sys.path.insert(0, _dsp_root)
 
     from signalscope_dsp.io import load_wav, load_raw_iq, RawIQFormat, load_sigmf
     from signalscope_dsp.detection import detect_bursts as dsp_detect_bursts, burst_stats
