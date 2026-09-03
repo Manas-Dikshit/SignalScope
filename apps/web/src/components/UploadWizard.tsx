@@ -158,7 +158,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
     files.length > 0 &&
     (format !== "sigmf" || files.length >= 2);
 
-  const waveformPlotData: PlotData[] = previewData
+  const waveformPlotData: Data[] = previewData
     ? [
         {
           x: previewData.samples_imag.map((_, i) =>
@@ -187,7 +187,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
       ]
     : [];
 
-  const scatterPlotData: PlotData[] = previewData
+  const scatterPlotData: Data[] = previewData
     ? [
         {
           x: previewData.samples_real,
