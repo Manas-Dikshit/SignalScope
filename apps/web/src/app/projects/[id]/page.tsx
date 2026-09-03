@@ -126,7 +126,7 @@ export default function AnalysisWorkspacePage() {
     },
   });
 
-  const waveformData: Data[] = [
+  const waveformData: PlotData[] = [
     {
       x: waveDown.x,
       y: waveDown.y,
@@ -145,7 +145,7 @@ export default function AnalysisWorkspacePage() {
     },
   ];
 
-  const scatterData: Data[] = [
+  const scatterData: PlotData[] = [
     {
       x: scatterDown.x,
       y: scatterDown.y,
