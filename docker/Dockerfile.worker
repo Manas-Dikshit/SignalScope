@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /tmp/requirements.txt
+COPY services/api/requirements.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 COPY services/dsp-worker/ /dsp-worker/
@@ -23,8 +23,6 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 WORKDIR /app
 
 COPY services/api/ /app/
-COPY database/migrations/ /app/alembic/
-COPY database/alembic.ini /app/alembic.ini 2>/dev/null || true
 
 RUN mkdir -p /data
 
