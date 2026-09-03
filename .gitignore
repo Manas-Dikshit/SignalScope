@@ -1,0 +1,5 @@
+.env.local
+.env.production
+
+node_modules
+__pycache__
