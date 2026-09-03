@@ -5,8 +5,6 @@ services:
       dockerfile: docker/Dockerfile.api
     volumes:
       - ./services/api:/app
-      - ./database/migrations:/app/alembic
-      - ./database/alembic.ini:/app/alembic.ini
       - uploads_data:/data
     command: >
       sh -c "alembic upgrade head &&
@@ -18,8 +16,6 @@ services:
       dockerfile: docker/Dockerfile.worker
     volumes:
       - ./services/api:/app
-      - ./database/migrations:/app/alembic
-      - ./database/alembic.ini:/app/alembic.ini
       - uploads_data:/data
     command: celery -A app.tasks worker --loglevel=info --concurrency=2
 
