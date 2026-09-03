@@ -23,7 +23,7 @@ import {
   Settings,
   BarChart3,
 } from "lucide-react";
-import type { Data } from "plotly.js-dist-min";
+import type { PlotData } from "plotly.js-dist-min";
 
 export default function AnalysisWorkspacePage() {
   const params = useParams();
