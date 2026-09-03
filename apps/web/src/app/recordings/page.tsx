@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recordingsApi, projectsApi } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { UploadWizard } from "@/components/UploadWizard";
@@ -12,7 +12,6 @@ import { useToast } from "@/components/ui/toast";
 import {
   Upload,
   Trash2,
-  Eye,
   Clock,
   FileAudio,
   Plus,
@@ -44,20 +43,8 @@ export default function RecordingsPage() {
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: async (recordingId: string) => {
-      // Create a project for this recording
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/projects`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ recording_id: recordingId }),
-        }
-      );
-      if (!res.ok) throw new Error("Failed to create project");
-      return res.json() as Promise<{ id: string }>;
-    },
+    mutationFn: (recordingId: string) =>
+      projectsApi.create({ recording_id: recordingId }),
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       window.location.href = `/projects/${project.id}`;
@@ -114,8 +101,7 @@ export default function RecordingsPage() {
       ) : (
         <div className="space-y-3">
           {recordings.map((rec) => {
-            const sr = rec.metadata.sample_rate;
-            const cf = rec.metadata.center_frequency;
+            const meta = rec.metadata_entry;
             return (
               <Card key={rec.id}>
                 <CardContent className="flex items-center justify-between p-4">
@@ -123,28 +109,26 @@ export default function RecordingsPage() {
                     <FileAudio className="h-8 w-8 text-primary shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">
-                        {rec.name || rec.filename}
+                        {rec.original_filename}
                       </div>
                       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
                         <Badge variant="outline" className="text-[10px]">
-                          {rec.format.toUpperCase()}
+                          {rec.file_format.toUpperCase()}
                         </Badge>
                         <span>{formatBytes(rec.file_size)}</span>
-                        {rec.metadata.duration_seconds && (
+                        {rec.duration_seconds && (
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {formatDuration(rec.metadata.duration_seconds)}
+                            {formatDuration(rec.duration_seconds)}
                           </span>
                         )}
-                        {sr && sr.value && (
-                          <span>{formatFrequency(sr.value as number)}</span>
+                        {meta?.sample_rate && (
+                          <span>{formatFrequency(meta.sample_rate)}</span>
                         )}
-                        {cf && cf.value && (
-                          <span>@ {formatFrequency(cf.value as number)}</span>
+                        {meta?.center_frequency && (
+                          <span>@ {formatFrequency(meta.center_frequency)}</span>
                         )}
-                        <span className="flex items-center gap-1">
-                          <span>{(rec.metadata.total_samples || 0).toLocaleString()} samples</span>
-                        </span>
+                        <span>{(rec.total_samples || 0).toLocaleString()} samples</span>
                       </div>
                     </div>
                   </div>
@@ -165,7 +149,7 @@ export default function RecordingsPage() {
                       onClick={() => {
                         if (
                           confirm(
-                            `Delete "${rec.name || rec.filename}"? This cannot be undone.`
+                            `Delete "${rec.original_filename}"? This cannot be undone.`
                           )
                         ) {
                           deleteMutation.mutate(rec.id);

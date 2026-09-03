@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { formatBytes, formatDuration, formatFrequency } from "@/lib/utils";
 import Link from "next/link";
 import {
@@ -76,13 +75,12 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {stats?.running_jobs.length ?? 0}
+              {stats?.running_jobs?.length ?? 0}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Running jobs */}
       {stats?.running_jobs && stats.running_jobs.length > 0 && (
         <Card>
           <CardHeader>
@@ -99,7 +97,7 @@ export default function DashboardPage() {
                     Job {job.id.slice(0, 8)}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {job.status}
+                    {job.current_stage ?? job.status}
                   </div>
                 </div>
                 <Badge variant={job.status === "running" ? "default" : "secondary"}>
@@ -111,7 +109,6 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Recent projects */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Recent Projects</CardTitle>
@@ -128,7 +125,6 @@ export default function DashboardPage() {
                   <div className="space-y-1">
                     <div className="text-sm font-medium">{project.name}</div>
                     <div className="text-xs text-muted-foreground">
-                      {project.recording?.filename ?? "Unknown recording"} ·{" "}
                       {new Date(project.created_at).toLocaleDateString()}
                     </div>
                   </div>
@@ -137,7 +133,7 @@ export default function DashboardPage() {
                       variant={
                         project.status === "completed"
                           ? "default"
-                          : project.status === "analyzing"
+                          : project.status === "active"
                           ? "secondary"
                           : "outline"
                       }
@@ -157,7 +153,6 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Recent recordings */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">Recent Recordings</CardTitle>
@@ -180,12 +175,12 @@ export default function DashboardPage() {
                     <Radio className="h-4 w-4 text-muted-foreground shrink-0" />
                     <div className="space-y-0.5">
                       <div className="text-sm font-medium">
-                        {rec.name || rec.filename}
+                        {rec.original_filename}
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {rec.format.toUpperCase()} · {formatBytes(rec.file_size)}
-                        {rec.metadata.duration_seconds
-                          ? ` · ${formatDuration(rec.metadata.duration_seconds)}`
+                        {rec.file_format.toUpperCase()} · {formatBytes(rec.file_size)}
+                        {rec.duration_seconds
+                          ? ` · ${formatDuration(rec.duration_seconds)}`
                           : ""}
                       </div>
                     </div>
