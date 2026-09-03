@@ -412,7 +412,7 @@ export default function AnalysisWorkspacePage() {
                 <EstimateCard
                   key={est.id}
                   label={est.parameter_name}
-                  value={est.value_json?.value ?? null}
+                  value={est.value_json?.value as number | string | null ?? null}
                   source={est.source as any}
                   confidence={est.confidence}
                   evidence={est.evidence_json?.evidence as string[] ?? []}

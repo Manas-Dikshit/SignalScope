@@ -528,7 +528,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
             <Check className="h-12 w-12 text-green-500 mx-auto mb-4" />
             <p className="text-lg font-medium">Upload complete</p>
             <p className="text-sm text-muted-foreground mt-1">
-              {createdRecording?.filename} is now in your library.
+              {createdRecording?.original_filename} is now in your library.
             </p>
             <Button className="mt-4" onClick={resetWizard}>
               Upload another
