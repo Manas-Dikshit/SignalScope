@@ -4,18 +4,10 @@ import * as React from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { projectsApi, recordingsApi, jobsApi } from "@/lib/api";
-import type { Recording, PreviewData, Estimate, Job } from "@/lib/types";
+import type { Recording, ParameterEstimate, Job } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { PlotlyChart } from "@/components/PlotlyChart";
 import {
@@ -27,12 +19,11 @@ import { useToast } from "@/components/ui/toast";
 import {
   Play,
   Loader2,
-  Clock,
   Radio,
   Settings,
   BarChart3,
 } from "lucide-react";
-import type { Data, Layout } from "plotly.js-dist-min";
+import type { Data } from "plotly.js-dist-min";
 
 export default function AnalysisWorkspacePage() {
   const params = useParams();
@@ -58,14 +49,20 @@ export default function AnalysisWorkspacePage() {
     enabled: !!recordingId,
   });
 
+  const { data: parameters } = useQuery({
+    queryKey: ["parameters", projectId],
+    queryFn: () => projectsApi.parameters(projectId),
+    enabled: !!projectId,
+  });
+
   const [roiStart, setRoiStart] = React.useState(0);
   const [roiEnd, setRoiEnd] = React.useState(100);
   const [activeTab, setActiveTab] = React.useState("waveform");
-  const [fftSize, setFftSize] = React.useState(2048);
 
-  const totalSamples = recording?.metadata?.total_samples ?? 0;
-  const duration = recording?.metadata?.duration_seconds ?? 0;
-  const sampleRate = (recording?.metadata?.sample_rate?.value as number) ?? 1;
+  const meta = recording?.metadata_entry;
+  const totalSamples = recording?.total_samples ?? 0;
+  const duration = recording?.duration_seconds ?? 0;
+  const sampleRate = meta?.sample_rate ?? 1;
 
   React.useEffect(() => {
     if (preview) {
@@ -74,46 +71,33 @@ export default function AnalysisWorkspacePage() {
     }
   }, [preview]);
 
-  const filterByRoi = React.useCallback(
-    <T extends number[]>(arr: T, ref?: number[]): T => {
-      if (!ref || arr.length === 0) return arr;
-      const startIdx = Math.floor((roiStart / 100) * ref.length);
-      const endIdx = Math.ceil((roiEnd / 100) * ref.length);
-      return ref.slice(startIdx, endIdx) as T;
-    },
-    [roiStart, roiEnd]
-  );
+  const n = preview?.preview_count ?? 0;
+  const samplesReal = preview?.samples_real ?? [];
+  const samplesImag = preview?.samples_imag ?? [];
+  const timeArr = React.useMemo(() => {
+    if (!sampleRate || n === 0) return [];
+    return Array.from({ length: n }, (_, i) => i / sampleRate);
+  }, [sampleRate, n]);
 
-  const waveformTime = preview
-    ? filterByRoi(preview.waveform.time, preview.waveform.time)
-    : [];
-  const waveformReal = preview
-    ? filterByRoi(preview.waveform.real, preview.waveform.time)
-    : [];
-  const waveformImag = preview
-    ? filterByRoi(preview.waveform.imag, preview.waveform.time)
-    : [];
-
-  const scatterReal = preview ? preview.scatter.real : [];
-  const scatterImag = preview ? preview.scatter.imag : [];
+  const roiStartIdx = Math.floor((roiStart / 100) * n);
+  const roiEndIdx = Math.ceil((roiEnd / 100) * n);
 
   const waveDown = downsamplePair(
-    waveformTime as number[],
-    waveformReal as number[],
+    timeArr.slice(roiStartIdx, roiEndIdx),
+    samplesReal.slice(roiStartIdx, roiEndIdx),
     20000
   );
   const waveImagDown = downsamplePair(
-    waveformTime as number[],
-    waveformImag as number[],
+    timeArr.slice(roiStartIdx, roiEndIdx),
+    samplesImag.slice(roiStartIdx, roiEndIdx),
     20000
   );
   const scatterDown = downsamplePair(
-    scatterReal as number[],
-    scatterImag as number[],
+    samplesReal.slice(roiStartIdx, roiEndIdx),
+    samplesImag.slice(roiStartIdx, roiEndIdx),
     5000
   );
 
-  // Job polling
   const [activeJobId, setActiveJobId] = React.useState<string | null>(null);
 
   const { data: jobData } = useQuery({
@@ -130,7 +114,7 @@ export default function AnalysisWorkspacePage() {
   const analyzeMutation = useMutation({
     mutationFn: () => projectsApi.analyze(projectId),
     onSuccess: (data) => {
-      setActiveJobId(data.job_id);
+      setActiveJobId(data.id);
       addToast({ title: "Analysis started" });
     },
     onError: (err: Error) => {
@@ -161,31 +145,6 @@ export default function AnalysisWorkspacePage() {
     },
   ];
 
-  const psdData: Data[] = preview
-    ? [
-        {
-          x: preview.psd.frequency,
-          y: preview.psd.power,
-          type: "scatter",
-          mode: "lines",
-          line: { width: 1, color: "#3b82f6" },
-        },
-      ]
-    : [];
-
-  const waterfallData: Data[] =
-    preview && preview.waterfall.spectrogram.length > 0
-      ? [
-          {
-            z: preview.waterfall.spectrogram,
-            x: preview.waterfall.frequency,
-            y: preview.waterfall.time,
-            type: "heatmap",
-            colorscale: "Viridis",
-          },
-        ]
-      : [];
-
   const scatterData: Data[] = [
     {
       x: scatterDown.x,
@@ -199,14 +158,9 @@ export default function AnalysisWorkspacePage() {
   const isLoading = projectLoading || recordingLoading;
   const jobCompleted = jobData?.status === "completed";
   const jobFailed = jobData?.status === "failed";
-  const jobRunning =
-    jobData?.status === "running" || jobData?.status === "pending";
+  const jobRunning = jobData?.status === "running" || jobData?.status === "queued";
 
-  const estimates: Estimate[] = jobCompleted
-    ? ((jobData?.result?.parameter_estimates as Estimate[]) ??
-      project?.parameter_estimates ??
-      [])
-    : project?.parameter_estimates ?? [];
+  const estimates: ParameterEstimate[] = parameters ?? [];
 
   if (isLoading) {
     return (
@@ -232,7 +186,7 @@ export default function AnalysisWorkspacePage() {
         <div>
           <h1 className="text-3xl font-bold">{project.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {recording.name || recording.filename}
+            {recording.original_filename}
           </p>
         </div>
         <Button
@@ -245,22 +199,23 @@ export default function AnalysisWorkspacePage() {
             <Play className="mr-2 h-4 w-4" />
           )}
           {jobRunning
-            ? "Analyzing..."
+            ? `Analyzing... ${jobData?.progress_percent ?? 0}%`
             : jobCompleted
             ? "Re-run Analysis"
             : "Run Parameter Estimation"}
         </Button>
       </div>
 
-      {/* Job progress */}
       {jobRunning && (
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
             <div>
-              <div className="text-sm font-medium">Analysis in progress</div>
+              <div className="text-sm font-medium">
+                Analysis in progress — {jobData?.current_stage ?? "starting"}
+              </div>
               <div className="text-xs text-muted-foreground">
-                Job {activeJobId?.slice(0, 8)}... — polling for results
+                {Math.round(jobData?.progress_percent ?? 0)}% complete
               </div>
             </div>
           </CardContent>
@@ -271,13 +226,12 @@ export default function AnalysisWorkspacePage() {
         <Card className="border-destructive">
           <CardContent className="p-4">
             <div className="text-sm text-destructive">
-              Analysis failed: {(jobData?.error as string) || "Unknown error"}
+              Analysis failed: {jobData?.error_message || "Unknown error"}
             </div>
           </CardContent>
         </Card>
       )}
 
-      {/* Metadata overview */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -290,61 +244,52 @@ export default function AnalysisWorkspacePage() {
             <div>
               <div className="text-xs text-muted-foreground">Sample Rate</div>
               <div className="text-sm font-medium">
-                {recording.metadata.sample_rate.value
-                  ? formatFrequency(recording.metadata.sample_rate.value as number)
+                {meta?.sample_rate
+                  ? formatFrequency(meta.sample_rate)
                   : "unknown"}
               </div>
-              <ProvenanceBadge
-                source={recording.metadata.sample_rate.source}
-                confidence={recording.metadata.sample_rate.confidence}
-              />
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">Center Frequency</div>
-              <div className="text-sm font-medium">
-                {recording.metadata.center_frequency?.value
-                  ? formatFrequency(
-                      recording.metadata.center_frequency.value as number
-                    )
-                  : "unknown"}
-              </div>
-              {recording.metadata.center_frequency && (
+              {meta?.metadata_source && (
                 <ProvenanceBadge
-                  source={recording.metadata.center_frequency.source}
-                  confidence={recording.metadata.center_frequency.confidence}
+                  source={meta.metadata_source as any}
+                  confidence={meta.metadata_confidence}
                 />
               )}
             </div>
             <div>
+              <div className="text-xs text-muted-foreground">Center Frequency</div>
+              <div className="text-sm font-medium">
+                {meta?.center_frequency
+                  ? formatFrequency(meta.center_frequency)
+                  : "unknown"}
+              </div>
+            </div>
+            <div>
               <div className="text-xs text-muted-foreground">Duration</div>
               <div className="text-sm font-medium">
-                {recording.metadata.duration_seconds
-                  ? formatDuration(recording.metadata.duration_seconds)
-                  : "unknown"}
+                {duration ? formatDuration(duration) : "unknown"}
               </div>
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Samples</div>
               <div className="text-sm font-medium">
-                {(recording.metadata.total_samples || 0).toLocaleString()}
+                {totalSamples.toLocaleString()}
               </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2 mt-3">
             <Badge variant="outline">
-              {recording.metadata.is_complex ? "Complex I/Q" : "Real"}
+              {meta?.is_complex ? "Complex I/Q" : "Real"}
             </Badge>
-            <Badge variant="outline">{recording.metadata.sample_dtype}</Badge>
+            <Badge variant="outline">{meta?.data_type ?? "unknown"}</Badge>
             <Badge variant="outline">
-              {recording.metadata.channel_count} ch
+              {meta?.channel_count ?? 1} ch
             </Badge>
-            <Badge variant="outline">{recording.format.toUpperCase()}</Badge>
+            <Badge variant="outline">{recording.file_format.toUpperCase()}</Badge>
             <Badge variant="outline">{formatBytes(recording.file_size)}</Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Region of interest */}
       {preview && (
         <Card>
           <CardHeader>
@@ -384,13 +329,10 @@ export default function AnalysisWorkspacePage() {
         </Card>
       )}
 
-      {/* Plots */}
       <div className="space-y-4">
         <div className="flex flex-wrap gap-2">
           {[
             { key: "waveform", label: "Waveform" },
-            { key: "psd", label: "PSD" },
-            { key: "waterfall", label: "Waterfall" },
             { key: "scatter", label: "I/Q Scatter" },
           ].map((tab) => (
             <Button
@@ -429,75 +371,6 @@ export default function AnalysisWorkspacePage() {
           </Card>
         )}
 
-        {activeTab === "psd" && (
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Power Spectral Density</CardTitle>
-              <Select
-                value={String(fftSize)}
-                onValueChange={(v) => setFftSize(Number(v))}
-              >
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[256, 512, 1024, 2048, 4096, 8192].map((n) => (
-                    <SelectItem key={n} value={String(n)}>
-                      FFT: {n}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardHeader>
-            <CardContent>
-              {previewLoading ? (
-                <div className="text-muted-foreground text-sm py-8 text-center">
-                  Loading preview...
-                </div>
-              ) : (
-                <PlotlyChart
-                  data={psdData}
-                  layout={{
-                    title: "Power spectral density",
-                    xaxis: { title: "Frequency (Hz, relative to center)" },
-                    yaxis: { title: "Power (dB)" },
-                    height: 400,
-                  }}
-                />
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {activeTab === "waterfall" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Waterfall / Spectrogram</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {previewLoading ? (
-                <div className="text-muted-foreground text-sm py-8 text-center">
-                  Loading preview...
-                </div>
-              ) : waterfallData.length > 0 ? (
-                <PlotlyChart
-                  data={waterfallData}
-                  layout={{
-                    title: "Waterfall / spectrogram",
-                    xaxis: { title: "Frequency (Hz)" },
-                    yaxis: { title: "Time (s)" },
-                    height: 450,
-                  }}
-                />
-              ) : (
-                <div className="text-muted-foreground text-sm py-8 text-center">
-                  No waterfall data available.
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {activeTab === "scatter" && (
           <Card>
             <CardHeader>
@@ -525,7 +398,6 @@ export default function AnalysisWorkspacePage() {
         )}
       </div>
 
-      {/* Parameter estimation results */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
@@ -536,17 +408,16 @@ export default function AnalysisWorkspacePage() {
         <CardContent>
           {estimates.length > 0 ? (
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {estimates.map((est, i) => (
+              {estimates.map((est) => (
                 <EstimateCard
-                  key={`${est.name}-${i}`}
-                  label={est.name}
-                  value={est.value}
-                  unit={est.unit}
-                  source={est.source}
+                  key={est.id}
+                  label={est.parameter_name}
+                  value={est.value_json?.value ?? null}
+                  source={est.source as any}
                   confidence={est.confidence}
-                  evidence={est.evidence}
-                  alternatives={est.alternatives}
-                  warnings={est.warnings}
+                  evidence={est.evidence_json?.evidence as string[] ?? []}
+                  alternatives={[]}
+                  warnings={est.evidence_json?.warnings as string[] ?? []}
                 />
               ))}
             </div>
