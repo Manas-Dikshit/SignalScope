@@ -1,7 +1,6 @@
-"use client";
-
+import * as React from "react";
 import dynamic from "next/dynamic";
-import type { Data, Layout, Config } from "plotly.js-dist-min";
+import type { PlotData, Layout as PlotlyLayout, Config as PlotlyConfig } from "plotly.js-dist-min";
 
 const Plot = dynamic(() => import("react-plotly.js"), {
   ssr: false,
@@ -13,9 +12,9 @@ const Plot = dynamic(() => import("react-plotly.js"), {
 });
 
 interface PlotlyChartProps {
-  data: Data[];
-  layout?: Partial<Layout>;
-  config?: Partial<Config>;
+  data: PlotData[];
+  layout?: Record<string, unknown>;
+  config?: Record<string, unknown>;
   className?: string;
   useWebGL?: boolean;
 }
@@ -25,9 +24,8 @@ export function PlotlyChart({
   layout = {},
   config = {},
   className,
-  useWebGL = false,
 }: PlotlyChartProps) {
-  const defaultLayout: Partial<Layout> = {
+  const defaultLayout: Record<string, unknown> = {
     paper_bgcolor: "transparent",
     plot_bgcolor: "transparent",
     font: { color: "#94a3b8", size: 12 },
@@ -44,7 +42,7 @@ export function PlotlyChart({
     ...layout,
   };
 
-  const defaultConfig: Partial<Config> = {
+  const defaultConfig: Record<string, unknown> = {
     responsive: true,
     displayModeBar: false,
     ...config,
@@ -53,14 +51,12 @@ export function PlotlyChart({
   return (
     <div className={className}>
       <Plot
-        data={data}
-        layout={defaultLayout}
-        config={defaultConfig}
+        data={data as PlotData[]}
+        layout={defaultLayout as PlotlyLayout}
+        config={defaultConfig as PlotlyConfig}
         useResizeHandler
         style={{ width: "100%", height: "100%" }}
       />
     </div>
   );
 }
-
-export type { Data, Layout };
