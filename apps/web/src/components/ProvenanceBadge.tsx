@@ -46,8 +46,8 @@ export function SourceBadge({ source }: { source: Source }) {
   );
 }
 
-export function ConfidenceDot({ confidence }: { confidence: number | null }) {
-  if (confidence === null) return null;
+export function ConfidenceDot({ confidence }: { confidence: number | null | undefined }) {
+  if (confidence == null) return null;
   let color = "bg-red-500";
   if (confidence >= 0.7) color = "bg-green-500";
   else if (confidence >= 0.4) color = "bg-yellow-500";

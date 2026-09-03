@@ -3,7 +3,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-interface SliderProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange"> {
+interface SliderProps
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    "onChange" | "value" | "defaultValue" | "min" | "max" | "step"
+  > {
   value?: number[];
   defaultValue?: number[];
   max?: number;
