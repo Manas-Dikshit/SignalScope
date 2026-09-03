@@ -62,6 +62,8 @@ class RecordingUploadResponse(BaseModel):
     file_size: int
     file_format: str
     status: str
+    total_samples: int | None
+    duration_seconds: float | None
     created_at: datetime
 
 
@@ -98,7 +100,7 @@ class RecordingResponse(BaseModel):
     total_samples: int | None
     created_at: datetime
     updated_at: datetime
-    metadata: RecordingMetadataResponse | None = None
+    metadata_entry: RecordingMetadataResponse | None = None
 
 
 class RecordingMetadataUpdate(BaseModel):
