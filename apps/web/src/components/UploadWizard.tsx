@@ -161,16 +161,24 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
   const waveformPlotData: Data[] = previewData
     ? [
         {
-          x: previewData.waveform.time,
-          y: previewData.waveform.real,
+          x: previewData.samples_imag.map((_, i) =>
+            previewData.sample_rate
+              ? i / previewData.sample_rate
+              : i
+          ),
+          y: previewData.samples_real,
           type: "scattergl",
           mode: "lines",
           name: "I",
           line: { width: 1 },
         },
         {
-          x: previewData.waveform.time,
-          y: previewData.waveform.imag,
+          x: previewData.samples_imag.map((_, i) =>
+            previewData.sample_rate
+              ? i / previewData.sample_rate
+              : i
+          ),
+          y: previewData.samples_imag,
           type: "scattergl",
           mode: "lines",
           name: "Q",
@@ -182,8 +190,8 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
   const scatterPlotData: Data[] = previewData
     ? [
         {
-          x: previewData.scatter.real,
-          y: previewData.scatter.imag,
+          x: previewData.samples_real,
+          y: previewData.samples_imag,
           type: "scattergl",
           mode: "markers",
           marker: { size: 2, opacity: 0.4 },
@@ -442,6 +450,12 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
         {/* Step 3: Preview */}
         {step === "preview" && previewData && (
           <>
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <span>Samples: {previewData.preview_count.toLocaleString()} of {previewData.total_samples.toLocaleString()}</span>
+              {previewData.sample_rate && (
+                <span> · Sample rate: {(previewData.sample_rate / 1e6).toFixed(2)} MHz</span>
+              )}
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div>
                 <Label className="text-sm font-medium mb-2 block">
@@ -450,23 +464,6 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
                 <PlotlyChart
                   data={waveformPlotData}
                   layout={{ title: "Time waveform", xaxis: { title: "Time (s)" }, yaxis: { title: "Amplitude" } }}
-                />
-              </div>
-              <div>
-                <Label className="text-sm font-medium mb-2 block">
-                  Power Spectral Density
-                </Label>
-                <PlotlyChart
-                  data={[
-                    {
-                      x: previewData.psd.frequency,
-                      y: previewData.psd.power,
-                      type: "scatter",
-                      mode: "lines",
-                      line: { width: 1 },
-                    },
-                  ]}
-                  layout={{ title: "PSD", xaxis: { title: "Frequency (Hz)" }, yaxis: { title: "Power (dB)" } }}
                 />
               </div>
               <div>
@@ -484,29 +481,6 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
                   }}
                 />
               </div>
-              {previewData.waterfall.spectrogram.length > 0 && (
-                <div>
-                  <Label className="text-sm font-medium mb-2 block">
-                    Waterfall
-                  </Label>
-                  <PlotlyChart
-                    data={[
-                      {
-                        z: previewData.waterfall.spectrogram,
-                        x: previewData.waterfall.frequency,
-                        y: previewData.waterfall.time,
-                        type: "heatmap",
-                        colorscale: "Viridis",
-                      },
-                    ]}
-                    layout={{
-                      title: "Waterfall",
-                      xaxis: { title: "Frequency (Hz)" },
-                      yaxis: { title: "Time (s)" },
-                    }}
-                  />
-                </div>
-              )}
             </div>
 
             <div className="flex justify-between">
