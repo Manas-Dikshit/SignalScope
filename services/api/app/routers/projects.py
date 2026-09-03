@@ -89,7 +89,11 @@ async def get_project(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AnalysisProject).where(AnalysisProject.id == project_id))
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
     project = result.scalar_one_or_none()
     return _project_or_403(project, user.id)
 
@@ -101,7 +105,11 @@ async def update_project(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AnalysisProject).where(AnalysisProject.id == project_id))
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
     project = result.scalar_one_or_none()
     _project_or_403(project, user.id)
 
@@ -131,7 +139,11 @@ async def estimate_parameters(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AnalysisProject).where(AnalysisProject.id == project_id))
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
     project = result.scalar_one_or_none()
     _project_or_403(project, user.id)
 
@@ -153,7 +165,11 @@ async def list_parameters(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AnalysisProject).where(AnalysisProject.id == project_id))
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
     project = result.scalar_one_or_none()
     _project_or_403(project, user.id)
 
@@ -172,7 +188,11 @@ async def detect_bursts(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AnalysisProject).where(AnalysisProject.id == project_id))
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
     project = result.scalar_one_or_none()
     _project_or_403(project, user.id)
 
@@ -245,7 +265,11 @@ async def get_segments(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(AnalysisProject).where(AnalysisProject.id == project_id))
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
     project = result.scalar_one_or_none()
     _project_or_403(project, user.id)
 
