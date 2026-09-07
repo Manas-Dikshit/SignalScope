@@ -73,21 +73,38 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 ### Local (without Docker)
 
+You need a reachable PostgreSQL and Redis. On machines where a native PostgreSQL
+already owns host port 5432, it shadows Docker's Postgres — so point these env
+vars at the database you actually want to use.
+
 ```bash
 # 1. Backend
 cd services/api
-pip install -e ../dsp-worker . 
+python -m pip install -e ../dsp-worker .
+#    set env vars to your Postgres/Redis, e.g. (PowerShell):
+set DATABASE_URL=postgresql+asyncpg://signalscope:signalscope@localhost:5432/signalscope
+set DATABASE_URL_SYNC=postgresql://signalscope:signalscope@localhost:5432/signalscope
+set REDIS_URL=redis://localhost:6379/0
+set CELERY_BROKER_URL=redis://localhost:6379/1
+set CELERY_RESULT_BACKEND=redis://localhost:6379/2
+set DATA_DIR=./data
+set SECRET_KEY=some-long-random-hex
+set CORS_ORIGINS=http://localhost:3000
 alembic upgrade head
 uvicorn app.main:app --reload
 
 # 2. Worker (optional, needed for DSP jobs)
-celery -A app.tasks worker --loglevel=info
+celery -A app.tasks worker --loglevel=info --concurrency=2
 
 # 3. Frontend
 cd apps/web
 npm install
 npm run dev
 ```
+
+> Note: the API container's `alembic upgrade head` runs automatically on
+> startup in Docker — you only need the manual `alembic upgrade head` above for
+> the local (no-Docker) path.
 
 See `docs/LOCAL_SETUP.md` for a detailed walkthrough.
 
