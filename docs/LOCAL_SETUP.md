@@ -40,8 +40,16 @@ What starts:
 | Web      | `web`     | http://localhost:3000 |
 
 On API startup the container runs `alembic upgrade head`, so the schema is
-created automatically. Uploaded files are stored in the `uploads_data`
-volume (`/data` inside the container, i.e. `DATA_DIR`).
+created automatically — **you don't need to run alembic yourself**. Uploaded
+files are stored in the `uploads_data` volume (`/data` inside the container,
+i.e. `DATA_DIR`).
+
+> **Port clash warning:** if your host already runs a native PostgreSQL on
+> port 5432, it shadows Docker's Postgres for host-local connections. Docker
+> clients (API/worker containers) are unaffected — they reach Postgres on the
+> private network. Just don't point local tools (psql, alembic) at
+> `localhost:5432` for the Docker database; run them via `docker compose exec
+> postgres psql ...` instead.
 
 Stop with `Ctrl-C`; restart with the same command. Rebuild images after
 dependency changes with `docker compose -f docker-compose.yml -f docker-compose.dev.yml build`.
