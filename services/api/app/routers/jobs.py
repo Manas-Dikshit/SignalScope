@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
+from ..auth import get_current_user
+from ..models import User
 from ..schemas import JobResponse
 from ..tasks import celery_app
 
@@ -9,7 +11,7 @@ router = APIRouter(prefix="/api/jobs", tags=["jobs"])
 
 
 @router.get("/{job_id}", response_model=JobResponse)
-async def get_job(job_id: str):
+async def get_job(job_id: str, user: User = Depends(get_current_user)):
     result = celery_app.AsyncResult(job_id)
 
     if result.state == "PENDING":

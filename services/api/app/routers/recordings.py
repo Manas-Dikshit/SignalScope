@@ -8,7 +8,9 @@ import uuid
 from pathlib import Path
 
 import numpy as np
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +30,7 @@ from ..schemas import (
 )
 
 router = APIRouter(prefix="/api/recordings", tags=["recordings"])
+limiter = Limiter(key_func=get_remote_address)
 
 # ── DSP loaders (imported lazily in the validation call) ──────────────────────
 
@@ -81,7 +84,9 @@ def _persist_metadata(db: AsyncSession, recording_id: uuid.UUID, rec):
 
 
 @router.post("/upload", response_model=RecordingUploadResponse, status_code=status.HTTP_201_CREATED)
+@limiter.limit("30/minute")
 async def upload_recording(
+    request: Request,
     file: UploadFile = File(...),
     loader: str = Form("wav"),
     raw_iq_params: str = Form("{}"),
@@ -189,6 +194,26 @@ async def get_recording(
     if rec.uploaded_by != user.id:
         raise HTTPException(status_code=403, detail="Access denied")
     return rec
+
+
+@router.get("/{recording_id}/metadata", response_model=RecordingMetadataResponse)
+async def get_metadata(
+    recording_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Recording).where(Recording.id == recording_id, Recording.status != "deleted"))
+    rec = result.scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Recording not found")
+    if rec.uploaded_by != user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    meta_result = await db.execute(select(RecordingMetadata).where(RecordingMetadata.recording_id == recording_id))
+    meta = meta_result.scalar_one_or_none()
+    if not meta:
+        raise HTTPException(status_code=404, detail="Recording metadata not found")
+    return meta
 
 
 @router.patch("/{recording_id}/metadata", response_model=RecordingMetadataResponse)
