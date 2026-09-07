@@ -84,14 +84,13 @@ def _persist_metadata(db: AsyncSession, recording_id: uuid.UUID, rec):
 @router.post("/upload", response_model=RecordingUploadResponse, status_code=status.HTTP_201_CREATED)
 async def upload_recording(
     user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
     _: None = Depends(rate_limit("30/minute", "upload")),
     file: UploadFile = File(...),
     loader: str = Form("wav"),
     raw_iq_params: str = Form("{}"),
     wav_params: str = Form("{}"),
     data_file: UploadFile | None = File(None),
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
 ):
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
