@@ -12,11 +12,6 @@ from celery import Celery
 
 from .config import settings
 
-# Make DSP modules importable
-_dsp_root = str(Path(__file__).resolve().parents[3] / "dsp-worker")
-if _dsp_root not in sys.path:
-    sys.path.insert(0, _dsp_root)
-
 celery_app = Celery(
     "signalscope",
     broker=settings.REDIS_URL,
