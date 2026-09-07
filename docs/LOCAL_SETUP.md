@@ -15,8 +15,19 @@ machine for development.
 cp .env.example .env                       # set SECRET_KEY to a random hex string
 cp apps/web/.env.example apps/web/.env.local
 
-docker compose -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
+
+> `docker-compose.dev.yml` overlays the base `docker-compose.yml` (which
+> declares Postgres, Redis, and the shared `uploads_data` volume). It is **not**
+> a standalone file — always merge the two with the command above.
+
+The dev overlay gives backend hot-reload (the API/worker mount `./services/api`
+into the container and `entrypoint` is overridden so the compose `command`
+runs migrations + `uvicorn --reload`). The `web` service uses the standalone
+Next server from the image (the web image ships no dev toolchain, so there is
+no `next dev` inside Docker; run `npm run dev` on the host for frontend
+hot-reload).
 
 What starts:
 
@@ -33,7 +44,22 @@ created automatically. Uploaded files are stored in the `uploads_data`
 volume (`/data` inside the container, i.e. `DATA_DIR`).
 
 Stop with `Ctrl-C`; restart with the same command. Rebuild images after
-dependency changes with `docker compose -f docker-compose.dev.yml build`.
+dependency changes with `docker compose -f docker-compose.yml -f docker-compose.dev.yml build`.
+
+### Frontend tests
+
+```bash
+cd apps/web
+npm install
+npm test        # Vitest + React Testing Library (component tests)
+```
+
+### Backend (DSP + API) tests
+
+```bash
+cd services/dsp-worker && python -m pytest tests/ -q   # DSP core
+cd services/api       && python -m pytest tests/ -q    # API
+```
 
 ## Option B — Local processes (no Docker)
 
@@ -81,7 +107,9 @@ with environment variables:
 |----------|---------|---------|
 | `DATABASE_URL` | `postgresql+asyncpg://...` | Async SQLAlchemy URL |
 | `DATABASE_URL_SYNC` | `postgresql://...` | Sync URL (worker DB access) |
-| `REDIS_URL` | `redis://redis:6379/0` | Celery broker/result backend |
+| `REDIS_URL` | `redis://redis:6379/0` | App Redis (listings, locks) |
+| `CELERY_BROKER_URL` | `redis://redis:6379/1` | Celery task broker |
+| `CELERY_RESULT_BACKEND` | `redis://redis:6379/2` | Celery result backend |
 | `DATA_DIR` | `/data` | Upload + working files |
 | `MAX_UPLOAD_BYTES` | `209715200` | Upload size cap (200 MB) |
 | `SECRET_KEY` | `change-me...` | JWT signing **must be overridden** |

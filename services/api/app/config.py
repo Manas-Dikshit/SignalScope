@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://signalscope:signalscope@localhost:5432/signalscope"
     DATABASE_URL_SYNC: str = "postgresql://signalscope:signalscope@localhost:5432/signalscope"
     REDIS_URL: str = "redis://localhost:6379/0"
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
     DATA_DIR: str = "./data"
     MAX_UPLOAD_BYTES: int = 200 * 1024 * 1024  # 200 MB
     SECRET_KEY: str = "change-me-in-production"

@@ -1,8 +1,19 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+export type FileFormat = "wav" | "raw_iq" | "sigmf";
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+export function inferFormatFromFilename(name: string): FileFormat {
+  const lower = name.toLowerCase();
+  if (lower.endsWith(".sigmf-meta") || lower.endsWith(".sigmf-data") || lower.endsWith(".json")) {
+    return "sigmf";
+  }
+  if (lower.endsWith(".wav")) return "wav";
+  return "raw_iq";
 }
 
 export function formatBytes(bytes: number): string {

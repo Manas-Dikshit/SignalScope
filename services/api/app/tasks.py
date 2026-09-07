@@ -12,12 +12,12 @@ from .config import settings
 
 celery_app = Celery(
     "signalscope",
-    broker=settings.REDIS_URL,
-    backend=settings.REDIS_URL,
+    broker=settings.CELERY_BROKER_URL,
+    backend=settings.CELERY_RESULT_BACKEND,
 )
 celery_app.conf.update(
     task_always_eager=os.environ.get("CELERY_TASK_ALWAYS_EAGER", "").lower() in ("1", "true", "yes"),
-    result_backend=settings.REDIS_URL,
+    result_backend=settings.CELERY_RESULT_BACKEND,
     broker_connection_retry_on_startup=True,
 )
 

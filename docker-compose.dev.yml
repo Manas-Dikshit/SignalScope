@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
+    entrypoint: []        # the ./src bind mount shadows /app/entrypoint-api.sh; the command below covers it
     volumes:
       - ./services/api:/app
       - uploads_data:/data
@@ -14,6 +15,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.worker
+    entrypoint: []        # same shadowing; the command below covers it
     volumes:
       - ./services/api:/app
       - uploads_data:/data
@@ -23,8 +25,3 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.web
-    volumes:
-      - ./apps/web:/app
-      - /app/node_modules
-      - /app/.next
-    command: npm run dev

@@ -18,13 +18,12 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { PlotlyChart } from "@/components/PlotlyChart";
-import { downsamplePair, downsample } from "@/lib/utils";
+import { downsamplePair, downsample, inferFormatFromFilename, type FileFormat } from "@/lib/utils";
 import { Upload, FileAudio, Check, X, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import type { Data } from "plotly.js-dist-min";
 
 type Step = "select" | "format" | "preview" | "done";
-type FileFormat = "wav" | "raw_iq" | "sigmf";
 
 export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
   const [step, setStep] = React.useState<Step>("select");
@@ -127,15 +126,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
     const dropped = Array.from(e.dataTransfer.files);
     if (dropped.length > 0) {
       setFiles(dropped);
-      if (dropped[0].name.endsWith(".sigmf-meta") || dropped[0].name.endsWith(".json")) {
-        setFormat("sigmf");
-      } else if (
-        dropped[0].name.endsWith(".wav")
-      ) {
-        setFormat("wav");
-      } else {
-        setFormat("raw_iq");
-      }
+      setFormat(inferFormatFromFilename(dropped[0].name));
     }
   };
 
@@ -143,13 +134,7 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
     const selected = Array.from(e.target.files || []);
     if (selected.length > 0) {
       setFiles(selected);
-      if (selected[0].name.endsWith(".sigmf-meta") || selected[0].name.endsWith(".json")) {
-        setFormat("sigmf");
-      } else if (selected[0].name.endsWith(".wav")) {
-        setFormat("wav");
-      } else {
-        setFormat("raw_iq");
-      }
+      setFormat(inferFormatFromFilename(selected[0].name));
     }
   };
 
