@@ -8,9 +8,7 @@ import uuid
 from pathlib import Path
 
 import numpy as np
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +16,7 @@ from ..auth import get_current_user
 from ..config import settings
 from ..database import get_db
 from ..models import Recording, RecordingMetadata, User
+from ..ratelimit import rate_limit
 from ..schemas import (
     PaginatedResponse,
     PreviewResponse,
@@ -30,7 +29,6 @@ from ..schemas import (
 )
 
 router = APIRouter(prefix="/api/recordings", tags=["recordings"])
-limiter = Limiter(key_func=get_remote_address)
 
 # ── DSP loaders (imported lazily in the validation call) ──────────────────────
 
@@ -84,9 +82,9 @@ def _persist_metadata(db: AsyncSession, recording_id: uuid.UUID, rec):
 
 
 @router.post("/upload", response_model=RecordingUploadResponse, status_code=status.HTTP_201_CREATED)
-@limiter.limit("30/minute")
 async def upload_recording(
-    request: Request,
+    user: User = Depends(get_current_user),
+    _: None = Depends(rate_limit("30/minute", "upload")),
     file: UploadFile = File(...),
     loader: str = Form("wav"),
     raw_iq_params: str = Form("{}"),
