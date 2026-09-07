@@ -31,13 +31,6 @@ router = APIRouter(prefix="/api/recordings", tags=["recordings"])
 
 # ── DSP loaders (imported lazily in the validation call) ──────────────────────
 
-import sys
-from pathlib import Path
-
-_dsp_root = str(Path(__file__).resolve().parents[3] / "dsp-worker")
-if _dsp_root not in sys.path:
-    sys.path.insert(0, _dsp_root)
-
 from signalscope_dsp.io import load_wav, load_raw_iq, RawIQFormat, load_sigmf  # noqa: E402
 
 
