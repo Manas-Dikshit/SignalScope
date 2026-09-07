@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "signalscope-dsp"
+version = "0.1.0-mvp"
+description = "Offline, explainable RF signal-analysis DSP core for SignalScope AI"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy",
+    "scipy",
+]
+
+[tool.setuptools.packages.find]
+include = ["signalscope_dsp*"]
