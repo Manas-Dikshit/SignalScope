@@ -122,6 +122,9 @@ export const projectsApi = {
 
   parameters: (id: string) =>
     request<ParameterEstimate[]>(`/api/projects/${id}/parameters`),
+
+  analysis: (id: string) =>
+    request<DeepAnalysis>(`/api/projects/${id}/analysis`),
 };
 
 export const jobsApi = {
