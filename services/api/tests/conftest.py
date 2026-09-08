@@ -12,8 +12,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 os.environ["CELERY_TASK_ALWAYS_EAGER"] = "1"
-os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///./test.db"
-os.environ["DATA_DIR"] = "./test_data"
+os.environ["DATABASE_URL"] = "sqlite+aiosqlite:////tmp/test.db"
+os.environ["DATA_DIR"] = "/tmp/test_data"
 os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["CORS_ORIGINS"] = '["http://localhost:3000"]'
 
