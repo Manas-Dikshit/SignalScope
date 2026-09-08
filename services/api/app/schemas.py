@@ -206,6 +206,67 @@ class SegmentInfo(BaseModel):
     duration_seconds: float | None
 
 
+# ── Deep Analysis ─────────────────────────────────────────────────────────────
+
+class AnalysisPSD(BaseModel):
+    freqs_hz: list[float]
+    psd_db: list[float]
+
+
+class AnalysisWaterfall(BaseModel):
+    freqs_hz: list[float]
+    times_s: list[float]
+    db: list[list[float]]
+
+
+class AnalysisModulation(BaseModel):
+    label: str
+    confidence: float | None
+    evidence: list[str]
+    alternatives: list[dict[str, Any]]
+
+
+class AnalysisDemod(BaseModel):
+    modulation: str
+    samples_per_symbol: int
+    bits_per_symbol: int
+    n_symbols: int
+    n_bits: int
+    constellation: list[list[float]]
+    hard_bits_preview: str
+    first_bytes_hex: str
+    warnings: list[str]
+
+
+class AnalysisFEC(BaseModel):
+    decoded_bits_count: int
+    path_metric: float
+    crc_valid: bool | None
+    crc_detail: str
+    first_bytes_hex: str
+    warnings: list[str]
+
+
+class AnalysisCorrelation(BaseModel):
+    sequences: list[dict[str, Any]]
+
+
+class DeepAnalysisResponse(BaseModel):
+    sample_rate: float | None
+    window_start_sample: int
+    window_end_sample: int
+    psd: AnalysisPSD
+    waterfall: AnalysisWaterfall
+    features: dict[str, dict[str, Any]]
+    modulation: AnalysisModulation
+    symbol_rate_hz: float | None
+    symbol_rate_confidence: float | None
+    deinterleave: dict[str, Any]
+    demodulation: AnalysisDemod
+    fec: AnalysisFEC
+    correlation: AnalysisCorrelation
+
+
 # ── Common ────────────────────────────────────────────────────────────────────
 
 class PaginatedResponse(BaseModel, Generic[T]):

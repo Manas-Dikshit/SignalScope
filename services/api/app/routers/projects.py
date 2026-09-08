@@ -255,17 +255,6 @@ async def detect_bursts(
 
 @router.get("/{project_id}/segments", response_model=list[SegmentInfo])
 async def get_segments(
-    project_id: uuid.UUID,
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(
-        select(AnalysisProject).where(
-            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
-        )
-    )
-    project = result.scalar_one_or_none()
-    _project_or_403(project, user.id)
 
     rec_result = await db.execute(select(Recording).where(Recording.id == project.recording_id))
     rec = rec_result.scalar_one_or_none()
