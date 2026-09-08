@@ -368,6 +368,7 @@ async def deep_analysis(
     }
     mode, order = demod_modes.get(mod_label, ("psk", 2))
     n_bits = n_symbols = 0
+    bits_per_symbol = 0
     constellation: list[list[float]] = []
     hard_bits: np.ndarray | None = None
     first_bytes_hex = ""
@@ -380,6 +381,7 @@ async def deep_analysis(
         else:
             result = demod_psk(work, order, sps)
         hard_bits = result.hard_bits
+        bits_per_symbol = result.bits_per_symbol
         n_bits, n_symbols = int(len(result.hard_bits)), int(len(result.symbols))
         cap = min(len(result.symbols), 2000)
         constellation = [[float(s.real), float(s.imag)] for s in result.symbols[:cap]]
@@ -452,7 +454,7 @@ async def deep_analysis(
         deinterleave=deinterleave,
         demodulation=AnalysisDemod(
             modulation=mod_label or "unknown", samples_per_symbol=sps,
-            bits_per_symbol=0, n_symbols=n_symbols, n_bits=n_bits,
+            bits_per_symbol=bits_per_symbol, n_symbols=n_symbols, n_bits=n_bits,
             constellation=constellation,
             hard_bits_preview="".join(str(b) for b in hard_bits[:128]) if hard_bits is not None else "",
             first_bytes_hex=first_bytes_hex,

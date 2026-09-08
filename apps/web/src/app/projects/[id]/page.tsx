@@ -4,7 +4,7 @@ import * as React from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { projectsApi, recordingsApi, jobsApi } from "@/lib/api";
-import type { Recording, ParameterEstimate, Job } from "@/lib/types";
+import type { Recording, ParameterEstimate, Job, DeepAnalysis } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   Radio,
   Settings,
   BarChart3,
+  Activity,
 } from "lucide-react";
 import type { Data } from "plotly.js-dist-min";
 
@@ -55,9 +56,16 @@ export default function AnalysisWorkspacePage() {
     enabled: !!projectId,
   });
 
+  const { data: analysis, isError: analysisError } = useQuery({
+    queryKey: ["analysis", projectId],
+    queryFn: () => projectsApi.analysis(projectId),
+    enabled: !!projectId,
+  });
+
   const [roiStart, setRoiStart] = React.useState(0);
   const [roiEnd, setRoiEnd] = React.useState(100);
   const [activeTab, setActiveTab] = React.useState("waveform");
+  const [analysisTab, setAnalysisTab] = React.useState("spectrum");
 
   const meta = recording?.metadata_entry;
   const totalSamples = recording?.total_samples ?? 0;
@@ -154,6 +162,64 @@ export default function AnalysisWorkspacePage() {
       marker: { size: 2, opacity: 0.4, color: "#3b82f6" },
     },
   ];
+
+  const psdData: Data[] = analysis
+    ? [
+        {
+          x: analysis.psd.freqs_hz,
+          y: analysis.psd.psd_db,
+          type: "scattergl",
+          mode: "lines",
+          line: { width: 1.5, color: "#3b82f6" },
+        },
+      ]
+    : [];
+
+  const waterfallData: Data[] = analysis
+    ? ([
+        {
+          z: analysis.waterfall.db,
+          x: analysis.waterfall.freqs_hz,
+          y: analysis.waterfall.times_s,
+          type: "heatmap",
+          colorscale: "Viridis",
+        },
+      ] as Data[])
+    : [];
+
+  const constellationData: Data[] = analysis
+    ? [
+        {
+          x: analysis.demodulation.constellation.map((p) => p[0]),
+          y: analysis.demodulation.constellation.map((p) => p[1]),
+          type: "scattergl",
+          mode: "markers",
+          marker: { size: 3, opacity: 0.6, color: "#22c55e" },
+        },
+      ]
+    : [];
+
+  const FEATURE_META: Record<string, { label: string; unit?: string }> = {
+    occupied_bandwidth: { label: "Occupied Bandwidth", unit: "Hz" },
+    peak_frequency: { label: "Peak Frequency", unit: "Hz" },
+    spectral_centroid: { label: "Spectral Centroid", unit: "Hz" },
+    spectral_flatness: { label: "Spectral Flatness" },
+    crest_factor: { label: "Crest Factor" },
+    zero_crossing_rate: { label: "Zero-Crossing Rate" },
+    snr: { label: "Estimated SNR", unit: "dB" },
+  };
+
+  const analysisFeatures = analysis
+    ? Object.entries(analysis.features)
+        .map(([name, f]) => ({
+          name,
+          label: FEATURE_META[name]?.label ?? name,
+          unit: FEATURE_META[name]?.unit ?? null,
+          value: f.value,
+          source: f.source,
+          confidence: f.confidence,
+        }))
+    : [];
 
   const isLoading = projectLoading || recordingLoading;
   const jobCompleted = jobData?.status === "completed";
