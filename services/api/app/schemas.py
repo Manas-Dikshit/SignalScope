@@ -127,7 +127,7 @@ class PreviewResponse(BaseModel):
 # ── Projects ──────────────────────────────────────────────────────────────────
 
 class ProjectCreate(BaseModel):
-    name: str
+    name: str = "Untitled project"
     description: str | None = None
     recording_id: uuid.UUID
     selected_start_sample: int | None = None
