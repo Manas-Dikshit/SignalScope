@@ -23,8 +23,10 @@ from app.database import get_db  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Base, User  # noqa: E402
 
-# Use SQLite for tests
-TEST_DB_URL = "sqlite+aiosqlite:///./test.db"
+# SQLite for tests, kept on the container's local disk (/tmp) rather than the
+# bind-mounted host filesystem, where sqlite's file locking is unreliable
+# under Docker-on-Windows (intermittent `disk I/O error` during drop_all).
+TEST_DB_URL = "sqlite+aiosqlite:////tmp/test.db"
 test_engine = create_async_engine(TEST_DB_URL, echo=False)
 TestSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
