@@ -429,7 +429,7 @@ async def deep_analysis(
         psd=AnalysisPSD(freqs_hz=freqs.tolist(), psd_db=psd_db.tolist()),
         waterfall=AnalysisWaterfall(
             freqs_hz=np.asarray(wf_freqs)[freq_idx].tolist(),
-            times_s=times := np.asarray(wf_times)[time_idx].tolist(),
+            times_s=np.asarray(wf_times)[time_idx].tolist(),
             db=wf_db.tolist(),
         ),
         features=features,
