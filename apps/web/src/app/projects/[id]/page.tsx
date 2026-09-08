@@ -467,6 +467,260 @@ export default function AnalysisWorkspacePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            Deep Analysis
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2 mb-4">
+            {[
+              { key: "spectrum", label: "Spectrum & Features" },
+              { key: "waterfall", label: "Waterfall" },
+              { key: "demodulation", label: "Demodulation" },
+              { key: "fec", label: "FEC & De-interleave" },
+              { key: "correlation", label: "Correlation" },
+            ].map((tab) => (
+              <Button
+                key={tab.key}
+                variant={analysisTab === tab.key ? "default" : "outline"}
+                size="sm"
+                onClick={() => setAnalysisTab(tab.key)}
+              >
+                {tab.label}
+              </Button>
+            ))}
+          </div>
+
+          {analysisError ? (
+            <div className="text-destructive text-sm py-4">
+              Deep analysis failed. Check that the recording has a known sample
+              rate and is accessible, then reload.
+            </div>
+          ) : !analysis ? (
+            <div className="text-muted-foreground text-sm py-8 text-center">
+              Computing spectra, modulation, and demodulation hypothesis...
+            </div>
+          ) : (
+            <>
+              {analysisTab === "spectrum" && (
+                <div className="space-y-4">
+                  <PlotlyChart
+                    data={psdData}
+                    layout={{
+                      title: "Power Spectral Density (Welch, ROI window)",
+                      xaxis: { title: "Frequency (Hz, relative)" },
+                      yaxis: { title: "dB" },
+                      height: 380,
+                    }}
+                  />
+                  {analysisFeatures.length > 0 && (
+                    <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {analysisFeatures.map((f) => (
+                        <EstimateCard
+                          key={f.name}
+                          label={f.label}
+                          value={f.value}
+                          unit={f.unit}
+                          source={f.source}
+                          confidence={f.confidence}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <EstimateCard
+                      label="Modulation Hypothesis"
+                      value={analysis.modulation.label}
+                      source="hypothesis"
+                      confidence={analysis.modulation.confidence}
+                      evidence={analysis.modulation.evidence}
+                      alternatives={analysis.modulation.alternatives.map(
+                        (a) => ({ value: a.label, confidence: a.confidence })
+                      )}
+                    />
+                    <EstimateCard
+                      label="Symbol Rate"
+                      value={analysis.symbol_rate_hz}
+                      unit="Hz"
+                      source="estimated"
+                      confidence={analysis.symbol_rate_confidence}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {analysisTab === "waterfall" && (
+                <PlotlyChart
+                  data={waterfallData}
+                  layout={{
+                    title: "Spectrogram (waterfall)",
+                    xaxis: { title: "Frequency (Hz, relative)" },
+                    yaxis: { title: "Time (s)" },
+                    yaxis_autorange: "reversed",
+                    height: 440,
+                  }}
+                />
+              )}
+
+              {analysisTab === "demodulation" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      Modulation: {analysis.demodulation.modulation}
+                    </Badge>
+                    <Badge variant="outline">
+                      {analysis.demodulation.bits_per_symbol} bits/symbol
+                    </Badge>
+                    <Badge variant="outline">
+                      {analysis.demodulation.samples_per_symbol} samples/symbol
+                    </Badge>
+                    <Badge variant="outline">
+                      {analysis.demodulation.n_symbols.toLocaleString()} symbols
+                    </Badge>
+                    <Badge variant="outline">
+                      {analysis.demodulation.n_bits.toLocaleString()} bits
+                    </Badge>
+                  </div>
+                  <PlotlyChart
+                    data={constellationData}
+                    layout={{
+                      title: "Demodulated constellation",
+                      xaxis: { title: "I" },
+                      yaxis: { title: "Q", scaleanchor: "x" },
+                      height: 420,
+                    }}
+                  />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-lg border bg-card p-3 space-y-1">
+                      <div className="text-xs text-muted-foreground">
+                        Hard bits (first 128)
+                      </div>
+                      <div className="font-mono text-xs break-all">
+                        {analysis.demodulation.hard_bits_preview ||
+                          "No bits recovered"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border bg-card p-3 space-y-1">
+                      <div className="text-xs text-muted-foreground">
+                        First bytes (hex)
+                      </div>
+                      <div className="font-mono text-xs break-all">
+                        {analysis.demodulation.first_bytes_hex || "—"}
+                      </div>
+                    </div>
+                  </div>
+                  {analysis.demodulation.warnings.length > 0 && (
+                    <ul className="space-y-1 text-xs text-yellow-400">
+                      {analysis.demodulation.warnings.map((w, i) => (
+                        <li key={i}>⚠️ {w}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {analysisTab === "fec" && (
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline">
+                      De-interleave: {analysis.deinterleave.best_attempt}
+                    </Badge>
+                    <Badge variant="outline">
+                      Validation score:{" "}
+                      {analysis.deinterleave.validation_score.toFixed(3)}
+                    </Badge>
+                    <Badge variant="outline">
+                      Decoded bits:{" "}
+                      {analysis.fec.decoded_bits_count.toLocaleString()}
+                    </Badge>
+                    <Badge variant="outline">
+                      Path metric: {analysis.fec.path_metric.toFixed(1)}
+                    </Badge>
+                    <Badge
+                      variant={
+                        analysis.fec.crc_valid === true
+                          ? "default"
+                          : analysis.fec.crc_valid === false
+                          ? "destructive"
+                          : "outline"
+                      }
+                    >
+                      CRC-16:{" "}
+                      {analysis.fec.crc_valid === null
+                        ? "no frame"
+                        : analysis.fec.crc_valid
+                        ? "OK"
+                        : "mismatch"}
+                    </Badge>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-lg border bg-card p-3 space-y-1">
+                      <div className="text-xs text-muted-foreground">
+                        Recovered bit stream (de-interleaved, first 64)
+                      </div>
+                      <div className="font-mono text-xs break-all">
+                        {analysis.deinterleave.recovered_preview || "—"}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border bg-card p-3 space-y-1">
+                      <div className="text-xs text-muted-foreground">
+                        FEC-decoded bytes (first 32)
+                      </div>
+                      <div className="font-mono text-xs break-all">
+                        {analysis.fec.first_bytes_hex || "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {analysis.fec.crc_detail}
+                  </div>
+                  {analysis.fec.warnings.length > 0 && (
+                    <ul className="space-y-1 text-xs text-yellow-400">
+                      {analysis.fec.warnings.map((w, i) => (
+                        <li key={i}>⚠️ {w}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {analysisTab === "correlation" && (
+                <div className="space-y-4">
+                  {analysis.correlation.sequences.length > 0 ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {analysis.correlation.sequences.map((s, i) => (
+                        <div key={i} className="rounded-lg border bg-card p-3 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs">{s.pattern_hex}</span>
+                            <Badge variant="secondary">
+                              {s.repeat_count}×
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Offsets:{" "}
+                            {s.offsets
+                              .map((o) => o.toString())
+                              .join(", ") || "—"}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground text-sm py-4 text-center">
+                      No repeated 24-bit patterns found in the decoded bit stream
+                      (candidate header/preamble sync).
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             Parameter Estimates
           </CardTitle>
