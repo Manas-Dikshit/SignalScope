@@ -253,8 +253,225 @@ async def detect_bursts(
     return BurstDetectionResponse(bursts=burst_responses, stats=stats_ser)
 
 
+@router.get("/{project_id}/analysis", response_model=DeepAnalysisResponse)
+async def deep_analysis(
+    project_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Interactive deep-dive over the project ROI: PSD, waterfall, spectral features,
+    modulation hypothesis, symbol-rate candidates, demodulated bits, de-interleaving,
+    FEC decode with CRC, and bit-stream correlation. Runs synchronously over a capped
+    window (first ~0.2 M samples of the ROI) so it stays responsive; the full file is
+    covered by the Celery parameter-estimation job instead."""
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
+    project = result.scalar_one_or_none()
+    _project_or_403(project, user.id)
+
+    rec_result = await db.execute(select(Recording).where(Recording.id == project.recording_id))
+    rec = rec_result.scalar_one_or_none()
+    if not rec:
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    meta_result = await db.execute(select(RecordingMetadata).where(RecordingMetadata.recording_id == rec.id))
+    meta = meta_result.scalar_one_or_none()
+    sr = meta.sample_rate if meta else None
+    if not sr:
+        raise HTTPException(status_code=422, detail="Sample rate unknown; cannot run deep analysis")
+
+    from signalscope_dsp.io import load_wav, load_raw_iq, RawIQFormat, load_sigmf
+    from signalscope_dsp.preprocessing import ConditioningConfig, condition_signal
+    from signalscope_dsp.features import compute_psd, compute_waterfall, extract_spectral_features
+    from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
+    from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
+    from signalscope_dsp.interleaving.block import block_deinterleave, convolutional_deinterleave, score_deinterleave_candidate
+    from signalscope_dsp.fec.convolutional import viterbi_decode
+    from signalscope_dsp.fec.validation import bits_to_bytes, crc16_ccitt
+    from signalscope_dsp.correlation.correlate import find_repeated_sequences
+
+    loader = rec.file_format
+    params: dict = {}
+    if meta and meta.raw_metadata_json:
+        if loader == "raw_iq":
+            params = {
+                "dtype": meta.data_type or "int16",
+                "layout": meta.iq_layout or "interleaved",
+                "endian": meta.endian or "little",
+                "sample_rate_hz": meta.sample_rate,
+                "center_frequency_hz": meta.center_frequency,
+            }
+        elif loader == "wav":
+            params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
+
+    if loader == "wav":
+        loaded = load_wav(rec.storage_path, **params)
+    elif loader == "raw_iq":
+        loaded = load_raw_iq(rec.storage_path, RawIQFormat(**params))
+    elif loader == "sigmf":
+        loaded = load_sigmf(rec.storage_path)
+    else:
+        raise HTTPException(status_code=422, detail=f"Unknown format: {loader}")
+
+    start = project.selected_start_sample or 0
+    end = project.selected_end_sample or len(loaded.samples)
+    samples = loaded.samples[start:end]
+    window_end = min(len(samples), 200_000)
+    samples = samples[:window_end]
+
+    cond = condition_signal(samples, sr, ConditioningConfig(remove_dc_offset=True, normalize=True))
+    work = cond.samples
+
+    freqs, psd_db = compute_psd(work, sr)
+    wf_freqs, wf_times, wf_db = compute_waterfall(work, sr, fft_size=256, overlap=0.5)
+    n_freq, n_time = wf_db.shape
+    freq_idx = list(range(0, n_freq, max(1, n_freq // 200)))
+    time_idx = list(range(0, n_time, max(1, n_time // 200)))
+    wf_db = wf_db[np.ix_(freq_idx, time_idx)]
+
+    feats = extract_spectral_features(work, sr)
+    features = {
+        f.name: {"value": f.value, "unit": f.unit, "source": f.source.value, "confidence": f.confidence}
+        for name, f in [
+            ("occupied_bandwidth", feats.occupied_bandwidth_hz),
+            ("peak_frequency", feats.peak_frequency_hz),
+            ("spectral_centroid", feats.spectral_centroid_hz),
+            ("spectral_flatness", feats.spectral_flatness),
+            ("crest_factor", feats.crest_factor),
+            ("zero_crossing_rate", feats.zero_crossing_rate),
+            ("snr_db", feats.snr_db),
+        ]
+    }
+
+    mod_est = classify_modulation_estimate(work, sr)
+    sym_cands = estimate_symbol_rate_candidates(work, sr)
+    sym_rate = next((c.value for c in sym_cands if c.value), None)
+    sym_conf = next((c.confidence for c in sym_cands if c.value), None)
+
+    mod_label = "" if mod_est.value is None else str(mod_est.value)
+    sps = max(2, int(round(sr / sym_rate))) if sym_rate else 8
+    demod_modes = {
+        "BPSK": ("psk", 2), "QPSK": ("psk", 4), "8-PSK": ("psk", 8),
+        "16-QAM": ("qam", 16), "64-QAM": ("qam", 64),
+        "2-FSK": ("fsk", 2), "4-FSK": ("fsk", 4),
+    }
+    mode, order = demod_modes.get(mod_label, ("psk", 2))
+    n_bits = n_symbols = 0
+    constellation: list[list[float]] = []
+    hard_bits: np.ndarray | None = None
+    first_bytes_hex = ""
+    demod_warnings: list[str] = []
+    try:
+        if mode == "qam":
+            result = demod_qam(work, order, sps)
+        elif mode == "fsk":
+            result = demod_fsk(work, sr, order, sps)
+        else:
+            result = demod_psk(work, order, sps)
+        hard_bits = result.hard_bits
+        n_bits, n_symbols = int(len(result.hard_bits)), int(len(result.symbols))
+        cap = min(len(result.symbols), 2000)
+        constellation = [[float(s.real), float(s.imag)] for s in result.symbols[:cap]]
+        first_bytes_hex = bits_to_bytes(result.hard_bits)[:32].hex()
+        demod_warnings = list(result.warnings)
+    except Exception as exc:
+        demod_warnings = [f"Demodulation failed: {exc}"]
+
+    deinterleave = {"best_attempt": "none", "validation_score": 0.0, "recovered_preview": ""}
+    fec_warnings: list[str] = []
+    decoded_bits: np.ndarray | None = None
+    path_metric = 0.0
+    crc_valid: bool | None = None
+    crc_detail = "No decoded bytes to check"
+    fec_bytes_hex = ""
+    if hard_bits is not None and len(hard_bits) >= 8:
+        raw_score = score_deinterleave_candidate(hard_bits)
+        attrs = [("block", block_deinterleave(hard_bits, 8, 8)), ("convolutional", convolutional_deinterleave(hard_bits, 4, 3))]
+        best_bits, best_name, best_score = hard_bits, "none", raw_score
+        for name, candidate in attrs:
+            score = score_deinterleave_candidate(candidate)
+            if score > best_score:
+                best_bits, best_name, best_score = candidate, name, score
+        deinterleave = {
+            "best_attempt": best_name,
+            "validation_score": round(best_score, 3),
+            "recovered_preview": "".join(str(b) for b in best_bits[:64]),
+        }
+        try:
+            viterbi = viterbi_decode(best_bits, constraint_length=7)
+            decoded_bits = viterbi.decoded_bits
+            path_metric = float(viterbi.path_metric)
+            fec_warnings = list(viterbi.warnings)
+            payload = bits_to_bytes(decoded_bits)
+            fec_bytes_hex = payload[:32].hex()
+            if len(payload) >= 2:
+                expected = crc16_ccitt(payload[:-2])
+                received = int.from_bytes(payload[-2:], "big")
+                crc_valid = expected == received
+                crc_detail = f"CRC-16 {('OK' if crc_valid else 'mismatch')}: computed {expected:04x} vs trailing {received:04x}"
+        except Exception as exc:
+            fec_warnings.append(f"FEC decode failed: {exc}")
+
+    sequences: list[dict] = []
+    if decoded_bits is not None and len(decoded_bits) >= 24:
+        sequences = [
+            {"pattern_hex": s["pattern_hex"], "repeat_count": s["repeat_count"], "offsets": s["offsets"][:5]}
+            for s in find_repeated_sequences(decoded_bits, 24, 2)[:10]
+        ]
+
+    return DeepAnalysisResponse(
+        sample_rate=sr,
+        window_start_sample=start,
+        window_end_sample=start + window_end,
+        psd=AnalysisPSD(freqs_hz=freqs.tolist(), psd_db=psd_db.tolist()),
+        waterfall=AnalysisWaterfall(
+            freqs_hz=np.asarray(wf_freqs)[freq_idx].tolist(),
+            times_s=times := np.asarray(wf_times)[time_idx].tolist(),
+            db=wf_db.tolist(),
+        ),
+        features=features,
+        modulation=AnalysisModulation(
+            label=mod_label or "unknown",
+            confidence=mod_est.confidence,
+            evidence=mod_est.evidence,
+            alternatives=[{"label": alt.value, "confidence": alt.confidence} for alt in mod_est.alternatives],
+        ),
+        symbol_rate_hz=sym_rate,
+        symbol_rate_confidence=sym_conf,
+        deinterleave=deinterleave,
+        demodulation=AnalysisDemod(
+            modulation=mod_label or "unknown", samples_per_symbol=sps,
+            bits_per_symbol=0, n_symbols=n_symbols, n_bits=n_bits,
+            constellation=constellation,
+            hard_bits_preview="".join(str(b) for b in hard_bits[:128]) if hard_bits is not None else "",
+            first_bytes_hex=first_bytes_hex,
+            warnings=demod_warnings,
+        ),
+        fec=AnalysisFEC(
+            decoded_bits_count=int(len(decoded_bits)) if decoded_bits is not None else 0,
+            path_metric=path_metric, crc_valid=crc_valid, crc_detail=crc_detail,
+            first_bytes_hex=fec_bytes_hex, warnings=fec_warnings,
+        ),
+        correlation=AnalysisCorrelation(sequences=sequences),
+    )
+
+
 @router.get("/{project_id}/segments", response_model=list[SegmentInfo])
 async def get_segments(
+    project_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(AnalysisProject).where(
+            AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
+        )
+    )
+    project = result.scalar_one_or_none()
+    _project_or_403(project, user.id)
 
     rec_result = await db.execute(select(Recording).where(Recording.id == project.recording_id))
     rec = rec_result.scalar_one_or_none()
