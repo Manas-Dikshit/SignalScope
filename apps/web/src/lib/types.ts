@@ -91,6 +91,39 @@ export interface Job {
   error_message: string | null;
 }
 
+export interface DeepAnalysis {
+  sample_rate: number | null;
+  window_start_sample: number;
+  window_end_sample: number;
+  psd: { freqs_hz: number[]; psd_db: number[] };
+  waterfall: { freqs_hz: number[]; times_s: number[]; db: number[][] };
+  features: Record<string, { value: number | string | null; unit: string | null; source: Source; confidence: number | null }>;
+  modulation: { label: string; confidence: number | null; evidence: string[]; alternatives: { label: string; confidence: number | null }[] };
+  symbol_rate_hz: number | null;
+  symbol_rate_confidence: number | null;
+  deinterleave: { best_attempt: string; validation_score: number; recovered_preview: string };
+  demodulation: {
+    modulation: string;
+    samples_per_symbol: number;
+    bits_per_symbol: number;
+    n_symbols: number;
+    n_bits: number;
+    constellation: number[][];
+    hard_bits_preview: string;
+    first_bytes_hex: string;
+    warnings: string[];
+  };
+  fec: {
+    decoded_bits_count: number;
+    path_metric: number;
+    crc_valid: boolean | null;
+    crc_detail: string;
+    first_bytes_hex: string;
+    warnings: string[];
+  };
+  correlation: { sequences: { pattern_hex: string; repeat_count: number; offsets: number[] }[] };
+}
+
 export interface DashboardStats {
   recording_count: number;
   project_count: number;
