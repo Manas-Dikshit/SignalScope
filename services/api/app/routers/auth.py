@@ -15,7 +15,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 @router.post("/register", response_model=Token, status_code=status.HTTP_201_CREATED)
-async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
+async def register(body: UserCreate, response: Response, db: AsyncSession = Depends(get_db)):
     existing = await db.execute(select(User).where(User.email == body.email))
     if existing.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
@@ -31,6 +31,14 @@ async def register(body: UserCreate, db: AsyncSession = Depends(get_db)):
 
     token = create_access_token(str(user.id))
     user_resp = UserResponse.model_validate(user)
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
     return Token(access_token=token, user=user_resp)
 
 
