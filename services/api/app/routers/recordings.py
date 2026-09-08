@@ -126,7 +126,12 @@ async def upload_recording(
         (upload_dir / _safe_filename(data_file.filename)).write_bytes(data_contents)
 
     # Validate with DSP loader
-    params = json.loads(raw_iq_params) if loader == "raw_iq" else json.loads(wav_params) if loader == "wav" else {}
+    params_raw = raw_iq_params if loader == "raw_iq" else wav_params if loader == "wav" else "{}"
+    try:
+        params = json.loads(params_raw) if params_raw else {}
+    except json.JSONDecodeError:
+        shutil.rmtree(upload_dir, ignore_errors=True)
+        raise HTTPException(status_code=422, detail="Invalid params JSON")
     try:
         rec = await _validate_and_load(str(storage_path), loader, params)
     except Exception as exc:
