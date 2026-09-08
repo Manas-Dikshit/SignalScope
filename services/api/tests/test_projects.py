@@ -176,3 +176,28 @@ async def test_cross_user_project_access_denied(client: AsyncClient):
 
     resp = await client.get(f"/api/projects/{project_id}", headers=headers_b)
     assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_deep_analysis(client: AsyncClient, auth_headers: dict):
+    rec_id = await _upload_recording(client, auth_headers)
+
+    create_resp = await client.post("/api/projects", headers=auth_headers, json={
+        "name": "Deep Analysis",
+        "recording_id": rec_id,
+    })
+    project_id = create_resp.json()["id"]
+
+    resp = await client.get(f"/api/projects/{project_id}/analysis", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["sample_rate"] == 8000
+    assert len(data["psd"]["freqs_hz"]) == len(data["psd"]["psd_db"]) > 0
+    assert len(data["waterfall"]["times_s"]) > 0
+    assert data["waterfall"]["db"]
+    assert data["modulation"]["label"]
+    assert data["demodulation"]["constellation"]
+    assert data["demodulation"]["hard_bits_preview"] != ""
+    assert data["deinterleave"]["best_attempt"] in ("none", "block", "convolutional")
+    assert "path_metric" in data["fec"]
+    assert "sequences" in data["correlation"]

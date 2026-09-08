@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+import numpy as np
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,8 +11,15 @@ from ..auth import get_current_user
 from ..database import get_db
 from ..models import AnalysisProject, ParameterEstimate, Recording, RecordingMetadata, User
 from ..schemas import (
+    AnalysisCorrelation,
+    AnalysisDemod,
+    AnalysisFEC,
+    AnalysisModulation,
+    AnalysisPSD,
+    AnalysisWaterfall,
     BurstDetectionResponse,
     BurstResponse,
+    DeepAnalysisResponse,
     JobResponse,
     PaginatedResponse,
     ParameterEstimateResponse,
