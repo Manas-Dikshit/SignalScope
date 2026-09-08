@@ -14,6 +14,7 @@ async def test_register(client: AsyncClient):
     assert resp.status_code == 201
     data = resp.json()
     assert "access_token" in data
+    assert resp.cookies.get("access_token") == data["access_token"]
 
 
 @pytest.mark.asyncio
