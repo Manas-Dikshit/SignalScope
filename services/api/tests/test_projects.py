@@ -53,6 +53,17 @@ async def test_create_project(client: AsyncClient, auth_headers: dict):
 
 
 @pytest.mark.asyncio
+async def test_create_project_without_name(client: AsyncClient, auth_headers: dict):
+    rec_id = await _upload_recording(client, auth_headers)
+
+    resp = await client.post("/api/projects", headers=auth_headers, json={
+        "recording_id": rec_id,
+    })
+    assert resp.status_code == 201
+    assert resp.json()["name"] == "Untitled project"
+
+
+@pytest.mark.asyncio
 async def test_list_projects(client: AsyncClient, auth_headers: dict):
     resp = await client.get("/api/projects", headers=auth_headers)
     assert resp.status_code == 200

@@ -84,7 +84,14 @@ export const recordingsApi = {
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(body.detail || `Upload failed (${res.status})`);
+      const detail = body.detail;
+      const message =
+        typeof detail === "string"
+          ? detail
+          : detail
+          ? JSON.stringify(detail)
+          : `Upload failed (${res.status})`;
+      throw new Error(message);
     }
     return res.json();
   },
