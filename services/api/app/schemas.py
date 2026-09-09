@@ -239,6 +239,8 @@ class AnalysisDemod(BaseModel):
 
 
 class AnalysisFEC(BaseModel):
+    fec_type: str | None = None
+    fec_confidence: float | None = None
     decoded_bits_count: int
     path_metric: float
     crc_valid: bool | None

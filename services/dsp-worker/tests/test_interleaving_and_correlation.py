@@ -2,6 +2,7 @@ import numpy as np
 
 from signalscope_dsp.interleaving.block import (
     block_interleave, block_deinterleave, convolutional_interleave, convolutional_deinterleave,
+    diagonal_interleave, diagonal_deinterleave, pseudo_random_interleave, pseudo_random_deinterleave,
 )
 from signalscope_dsp.correlation.correlate import sliding_pattern_match, find_repeated_sequences
 
@@ -25,6 +26,14 @@ def test_convolutional_interleave_round_trip():
     delay = (4 - 1) * 3 * 4
     n = len(bits) - delay
     assert np.array_equal(bits[:n], recovered[delay:delay + n])
+
+
+def test_diagonal_and_pseudo_random_interleave_round_trip():
+    rng = np.random.default_rng(11)
+    bits = rng.integers(0, 2, size=64).astype(np.uint8)
+    assert np.array_equal(bits, diagonal_deinterleave(diagonal_interleave(bits, 8, 8), 8, 8))
+    shuffled = pseudo_random_interleave(bits, seed=42, block_size=16)
+    assert np.array_equal(bits, pseudo_random_deinterleave(shuffled, seed=42, block_size=16))
 
 
 def test_sliding_pattern_match_finds_known_offset():

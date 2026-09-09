@@ -1,11 +1,15 @@
 from .block import (
     block_interleave, block_deinterleave,
     convolutional_interleave, convolutional_deinterleave,
-    diagonal_interleave, score_deinterleave_candidate,
+    diagonal_interleave, diagonal_deinterleave,
+    pseudo_random_interleave, pseudo_random_deinterleave,
+    score_deinterleave_candidate,
 )
 
 __all__ = [
     "block_interleave", "block_deinterleave",
     "convolutional_interleave", "convolutional_deinterleave",
-    "diagonal_interleave", "score_deinterleave_candidate",
+    "diagonal_interleave", "diagonal_deinterleave",
+    "pseudo_random_interleave", "pseudo_random_deinterleave",
+    "score_deinterleave_candidate",
 ]

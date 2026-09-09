@@ -92,8 +92,9 @@ frontend provenance badge (source x confidence) + file-format inference.
 - Demodulators sample symbol centers directly; no closed-loop Costas/PLL
   carrier or Gardner/M&M timing recovery yet. Works well on the synthetic
   generator and clean near-baseband captures.
-- FEC is rate-1/2 convolutional/Viterbi only (hard-decision). Reed-Solomon,
-  LDPC, and soft-decision LLR decoding are not in this MVP.
+- FEC includes rate-1/2 convolutional/Viterbi, byte-oriented Reed-Solomon,
+  and generic binary LDPC min-sum decoding. FEC family identification remains
+  a ranked hypothesis and needs link-specific parameters for production use.
 - Tests run against SQLite (with eager Celery), not Testcontainers Postgres —
   the Postgres path is exercised by the Docker deployment.
 

@@ -296,7 +296,7 @@ async def deep_analysis(
     from signalscope_dsp.features import compute_psd, compute_waterfall, extract_spectral_features
     from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
     from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
-    from signalscope_dsp.interleaving.block import block_deinterleave, convolutional_deinterleave, score_deinterleave_candidate
+    from signalscope_dsp.detection.parameters import identify_fec, identify_interleaving
     from signalscope_dsp.fec.convolutional import viterbi_decode
     from signalscope_dsp.fec.validation import bits_to_bytes, crc16_ccitt
     from signalscope_dsp.correlation.correlate import find_repeated_sequences
@@ -395,19 +395,22 @@ async def deep_analysis(
     crc_valid: bool | None = None
     crc_detail = "No decoded bytes to check"
     fec_bytes_hex = ""
+    fec_est = None
     if hard_bits is not None and len(hard_bits) >= 8:
-        raw_score = score_deinterleave_candidate(hard_bits)
-        attrs = [("block", block_deinterleave(hard_bits, 8, 8)), ("convolutional", convolutional_deinterleave(hard_bits, 4, 3))]
-        best_bits, best_name, best_score = hard_bits, "none", raw_score
-        for name, candidate in attrs:
-            score = score_deinterleave_candidate(candidate)
-            if score > best_score:
-                best_bits, best_name, best_score = candidate, name, score
-        deinterleave = {
-            "best_attempt": best_name,
-            "validation_score": round(best_score, 3),
-            "recovered_preview": "".join(str(b) for b in best_bits[:64]),
-        }
+        deinterleave = identify_interleaving(hard_bits)
+        best_bits = hard_bits
+        if deinterleave["best_attempt"] != "none":
+            from signalscope_dsp.interleaving import (
+                block_deinterleave, convolutional_deinterleave,
+                diagonal_deinterleave, pseudo_random_deinterleave,
+            )
+            best_bits = {
+                "block": block_deinterleave(hard_bits, 8, 8),
+                "convolutional": convolutional_deinterleave(hard_bits, 4, 3),
+                "diagonal": diagonal_deinterleave(hard_bits, 8, 8),
+                "pseudo_random": pseudo_random_deinterleave(hard_bits, seed=0),
+            }[deinterleave["best_attempt"]]
+        fec_est = identify_fec(best_bits)
         try:
             viterbi = viterbi_decode(best_bits, constraint_length=7)
             decoded_bits = viterbi.decoded_bits
@@ -452,13 +455,16 @@ async def deep_analysis(
         deinterleave=deinterleave,
         demodulation=AnalysisDemod(
             modulation=mod_label or "unknown", samples_per_symbol=sps,
-            bits_per_symbol=0, n_symbols=n_symbols, n_bits=n_bits,
+            bits_per_symbol=(int(np.log2(order)) if hard_bits is not None else 0),
+            n_symbols=n_symbols, n_bits=n_bits,
             constellation=constellation,
             hard_bits_preview="".join(str(b) for b in hard_bits[:128]) if hard_bits is not None else "",
             first_bytes_hex=first_bytes_hex,
             warnings=demod_warnings,
         ),
         fec=AnalysisFEC(
+            fec_type=str(fec_est.value) if fec_est and fec_est.value else None,
+            fec_confidence=fec_est.confidence if fec_est else None,
             decoded_bits_count=int(len(decoded_bits)) if decoded_bits is not None else 0,
             path_metric=path_metric, crc_valid=crc_valid, crc_detail=crc_detail,
             first_bytes_hex=fec_bytes_hex, warnings=fec_warnings,

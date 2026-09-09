@@ -69,6 +69,58 @@ def diagonal_interleave(bits: np.ndarray, rows: int, cols: int, offset: int = 1)
     return out
 
 
+def diagonal_deinterleave(bits: np.ndarray, rows: int, cols: int, offset: int = 1) -> np.ndarray:
+    """Inverse of :func:`diagonal_interleave` for one fixed-size block."""
+    if rows < 1 or cols < 1:
+        raise ValueError("rows and cols must be positive")
+    if offset % cols == 0:
+        raise ValueError("offset must be relatively non-zero modulo cols")
+    n = rows * cols
+    padded = np.zeros(n, dtype=bits.dtype)
+    padded[: min(len(bits), n)] = bits[:n]
+    matrix = padded.reshape(cols, rows).T
+    recovered = np.zeros(n, dtype=bits.dtype)
+    for i in range(n):
+        r = i % rows
+        c = (i // rows * offset + r) % cols
+        recovered[i] = matrix[r, c]
+    return recovered
+
+
+def pseudo_random_interleave(bits: np.ndarray, seed: int = 0, block_size: int | None = None) -> np.ndarray:
+    """Permute each block with a reproducible pseudo-random permutation."""
+    if seed < 0:
+        raise ValueError("seed must be non-negative")
+    size = block_size or len(bits)
+    if size < 1:
+        raise ValueError("block_size must be positive")
+    out = np.zeros_like(bits)
+    rng = np.random.default_rng(seed)
+    for start in range(0, len(bits), size):
+        end = min(start + size, len(bits))
+        permutation = rng.permutation(end - start)
+        out[start:end] = bits[start:end][permutation]
+    return out
+
+
+def pseudo_random_deinterleave(bits: np.ndarray, seed: int = 0, block_size: int | None = None) -> np.ndarray:
+    """Inverse of :func:`pseudo_random_interleave`."""
+    if seed < 0:
+        raise ValueError("seed must be non-negative")
+    size = block_size or len(bits)
+    if size < 1:
+        raise ValueError("block_size must be positive")
+    out = np.zeros_like(bits)
+    rng = np.random.default_rng(seed)
+    for start in range(0, len(bits), size):
+        end = min(start + size, len(bits))
+        permutation = rng.permutation(end - start)
+        recovered = np.zeros(end - start, dtype=bits.dtype)
+        recovered[permutation] = bits[start:end]
+        out[start:end] = recovered
+    return out
+
+
 def score_deinterleave_candidate(recovered_bits: np.ndarray) -> float:
     """Heuristic validation score in [0,1] for a candidate de-interleaving parameter
     set: penalizes very high or very low bit-transition rates, which are typical

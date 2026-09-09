@@ -2,6 +2,8 @@ import numpy as np
 
 from signalscope_dsp.fec.convolutional import convolutional_encode, viterbi_decode
 from signalscope_dsp.fec.validation import crc16_ccitt, validate_crc16, bits_to_bytes, find_sync_word
+from signalscope_dsp.fec.reed_solomon import reed_solomon_encode, reed_solomon_decode
+from signalscope_dsp.fec.ldpc import ldpc_decode
 
 
 def test_convolutional_round_trip_no_noise():
@@ -49,3 +51,21 @@ def test_find_sync_word():
     offsets = [m["offset"] for m in matches]
     assert 0 in offsets
     assert 8 in offsets
+
+
+def test_reed_solomon_corrects_symbol_errors():
+    payload = b"signalscope RS payload"
+    encoded = bytearray(reed_solomon_encode(payload, parity_symbols=16))
+    encoded[2] ^= 0x55
+    encoded[-3] ^= 0x11
+    result = reed_solomon_decode(bytes(encoded), parity_symbols=16)
+    assert result.valid
+    assert result.decoded_bytes == payload
+    assert result.corrected_symbols == 2
+
+
+def test_ldpc_min_sum_satisfies_parity_checks():
+    parity = np.array([[1, 1, 0, 1], [0, 1, 1, 1]], dtype=np.uint8)
+    result = ldpc_decode(np.array([4.0, 4.0, 4.0, 4.0]), parity)
+    assert result.parity_satisfied
+    assert np.array_equal((parity @ result.decoded_bits) % 2, np.zeros(2, dtype=np.uint8))
