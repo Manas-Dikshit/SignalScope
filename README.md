@@ -73,47 +73,7 @@ Traditional signal analyzers output a single number and call it truth. SignalSco
 
 ## 🏗️ Architecture
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                        Next.js 14 Frontend                          │
-│       React 18 · Tailwind · shadcn/ui · TanStack Query · Plotly     │
-│      Waveform/IQ viewer · ROI selection · Provenance UI             │
-└───────────────▲──────────────────────────────┬─────────────────────┘
-                │ REST (JWT cookie auth)        │
-┌───────────────┴──────────────────────────────▼─────────────────────┐
-│                          FastAPI Backend                            │
-│   Auth · Upload (WAV/raw-IQ/SigMF) · Projects · Recordings           │
-│   Jobs · Dashboard · Rate limiting · SQLAlchemy (async) · Alembic    │
-└───────────────▲──────────────────────────────┬─────────────────────┘
-                │ Redis (message broker)        │ Postgres
-┌───────────────┴──────────────────────────────▼─────────────────────┐
-│                         Celery Worker                    PostgreSQL 16│
-│   Runs the full signalscope_dsp pipeline with provenance tracking   │
-└──────────────────────────────────────────────────────────────────────┘
-```
-
-### Repository layout
-
-```
-├── apps/web/                          # Next.js 14 frontend (App Router)
-│   └── src/
-│       ├── app/                       # Routes: projects, recordings, login
-│       └── components/                # shadcn/ui + Plotly charts + ProvenanceBadge
-├── services/
-│   ├── api/                           # FastAPI backend
-│   │   ├── app/routers/               # auth, uploads, projects, recordings, jobs, dashboard
-│   │   └── alembic/                   # DB migrations (applied on container start)
-│   └── dsp-worker/
-│       └── signalscope_dsp/           # 🔬 The DSP core (provenance-tracked library)
-│           ├── features/              # spectral feature extraction
-│           ├── modulation/            # classification + symbol-rate estimation
-│           ├── detection/             # burst detection & statistics
-│           └── ...                    # demod, de-interleave, FEC, bit correlation
-├── docker/                            # Dockerfiles: api / worker / web
-└── docs/                              # Setup + specification
-```
-
-> The DSP core (`signalscope_dsp`) is installed **editable** (`pip install -e`) into both the API and worker images, so API and Celery worker call the *exact same* functions.
+> **📐 Ready the full system design —** [**`ARCHITECTURE.md`**](./ARCHITECTURE.md) contains the complete Mermaid system-design diagram of every layer (frontend, API, Celery worker, Redis, Postgres), the DSP processing pipeline, and the async job lifecycle sequence. Tech-stack badges included.
 
 ---
 
