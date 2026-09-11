@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useParams } from "next/navigation";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { projectsApi, recordingsApi, jobsApi } from "@/lib/api";
 import type { Recording, ParameterEstimate, Job, DeepAnalysis } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,7 @@ export default function AnalysisWorkspacePage() {
   const params = useParams();
   const projectId = params.id as string;
   const { addToast } = useToast();
+  const queryClient = useQueryClient();
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ["project", projectId],
@@ -118,6 +119,13 @@ export default function AnalysisWorkspacePage() {
       return 2000;
     },
   });
+
+  React.useEffect(() => {
+    if (jobData?.status === "completed") {
+      queryClient.invalidateQueries({ queryKey: ["parameters", projectId] });
+      queryClient.invalidateQueries({ queryKey: ["project", projectId] });
+    }
+  }, [jobData?.status, projectId, queryClient]);
 
   const analyzeMutation = useMutation({
     mutationFn: () => projectsApi.analyze(projectId),
