@@ -8,6 +8,7 @@ import type {
   Job,
   DashboardStats,
   DeepAnalysis,
+  BurstDetection,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -125,6 +126,11 @@ export const projectsApi = {
 
   analysis: (id: string) =>
     request<DeepAnalysis>(`/api/projects/${id}/analysis`),
+
+  detectBursts: (id: string) =>
+    request<BurstDetection>(`/api/projects/${id}/detect-bursts`, {
+      method: "POST",
+    }),
 };
 
 export const jobsApi = {
