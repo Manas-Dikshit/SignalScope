@@ -3,7 +3,6 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ConfidenceIndicator } from "@/components/ConfidenceIndicator";
-import { confidenceColor } from "@/lib/tokens";
 import type { Source } from "@/lib/types";
 import {
   FileText,
