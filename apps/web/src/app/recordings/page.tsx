@@ -5,7 +5,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recordingsApi, projectsApi } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { UploadWizard } from "@/components/UploadWizard";
 import { formatBytes, formatDuration, formatFrequency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -13,8 +12,9 @@ import {
   Upload,
   Trash2,
   Clock,
-  FileAudio,
+  Radio,
   Plus,
+  Waveform,
 } from "lucide-react";
 
 export default function RecordingsPage() {
