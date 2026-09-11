@@ -62,7 +62,9 @@ export default function RecordingsPage() {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Upload Recording</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            Upload Recording
+          </h1>
           <Button variant="ghost" onClick={() => setShowUpload(false)}>
             Cancel
           </Button>
@@ -74,22 +76,35 @@ export default function RecordingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Recording Library</h1>
-        <Button onClick={() => setShowUpload(true)}>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between reveal">
+        <div className="space-y-1">
+          <h1 className="font-display text-2xl font-semibold tracking-tight">
+            Recording Library
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            WAV, raw I/Q, and SigMF recordings for analysis.
+          </p>
+        </div>
+        <Button onClick={() => setShowUpload(true)} className="shrink-0 w-full sm:w-auto">
           <Upload className="mr-2 h-4 w-4" />
           Upload
         </Button>
       </div>
 
       {isLoading ? (
-        <div className="text-muted-foreground text-sm">Loading recordings...</div>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 rounded-lg border bg-card shimmer" />
+          ))}
+        </div>
       ) : !recordings || recordings.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileAudio className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-lg font-medium">No recordings</p>
-            <p className="text-sm text-muted-foreground mt-1 mb-4">
+        <Card className="reveal reveal-delay-1">
+          <CardContent className="flex flex-col items-center justify-center py-14">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/10">
+              <Waveform className="h-7 w-7 text-secondary" />
+            </div>
+            <p className="text-lg font-display font-semibold">No recordings</p>
+            <p className="mt-1 mb-5 text-sm text-muted-foreground">
               Upload a WAV, Raw IQ, or SigMF recording to get started.
             </p>
             <Button onClick={() => setShowUpload(true)}>
@@ -103,28 +118,28 @@ export default function RecordingsPage() {
           {recordings.map((rec) => {
             const meta = rec.metadata_entry;
             return (
-              <Card key={rec.id}>
-                <CardContent className="flex items-center justify-between p-4">
+              <Card key={rec.id} className="card-hover reveal">
+                <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <FileAudio className="h-8 w-8 text-primary shrink-0" />
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                      <Radio className="h-5 w-5 text-primary" />
+                    </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">
                         {rec.original_filename}
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mt-1">
-                        <Badge variant="outline" className="text-[10px]">
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-mono text-muted-foreground">
+                        <span className="rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider">
                           {rec.file_format.toUpperCase()}
-                        </Badge>
+                        </span>
                         <span>{formatBytes(rec.file_size)}</span>
                         {rec.duration_seconds && (
-                          <span className="flex items-center gap-1">
+                          <span className="inline-flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {formatDuration(rec.duration_seconds)}
                           </span>
                         )}
-                        {meta?.sample_rate && (
-                          <span>{formatFrequency(meta.sample_rate)}</span>
-                        )}
+                        {meta?.sample_rate && <span>{formatFrequency(meta.sample_rate)}</span>}
                         {meta?.center_frequency && (
                           <span>@ {formatFrequency(meta.center_frequency)}</span>
                         )}
@@ -132,12 +147,10 @@ export default function RecordingsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <div className="flex shrink-0 items-center gap-2">
                     <Button
                       size="sm"
-                      onClick={() =>
-                        createProjectMutation.mutate(rec.id)
-                      }
+                      onClick={() => createProjectMutation.mutate(rec.id)}
                       disabled={createProjectMutation.isPending}
                     >
                       <Plus className="mr-1 h-3 w-3" />
@@ -145,17 +158,15 @@ export default function RecordingsPage() {
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
+                      variant="ghost"
+                      className="text-muted-foreground hover:text-destructive"
                       onClick={() => {
-                        if (
-                          confirm(
-                            `Delete "${rec.original_filename}"? This cannot be undone.`
-                          )
-                        ) {
+                        if (confirm(`Delete "${rec.original_filename}"? This cannot be undone.`)) {
                           deleteMutation.mutate(rec.id);
                         }
                       }}
                       disabled={deleteMutation.isPending}
+                      aria-label={`Delete ${rec.original_filename}`}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
