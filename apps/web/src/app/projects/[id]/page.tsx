@@ -741,6 +741,7 @@ export default function AnalysisWorkspacePage() {
                   key={est.id}
                   label={est.parameter_name}
                   value={est.value_json?.value as number | string | null ?? null}
+                  unit={est.value_json?.unit as string | null ?? null}
                   source={est.source as any}
                   confidence={est.confidence}
                   evidence={est.evidence_json?.evidence as string[] ?? []}
