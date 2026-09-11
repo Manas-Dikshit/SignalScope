@@ -601,22 +601,6 @@ export default function AnalysisWorkspacePage() {
                         confidence={analysis.symbol_rate_confidence}
                         accent="secondary"
                       />
-                      <div className="rounded-lg border bg-card/50 p-3">
-                        <div className="text-xs font-medium text-muted-foreground">
-                          Symbol-rate candidates
-                        </div>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          {(analysis.symbol_rate_candidates ?? []).length > 0 ? (
-                            analysis.symbol_rate_candidates.map((c, i) => (
-                              <span key={i} className="rounded-full border px-2.5 py-1 font-mono text-xs">
-                                {formatFrequency(c)}
-                              </span>
-                            ))
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
