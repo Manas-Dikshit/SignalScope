@@ -26,23 +26,23 @@ describe("SourceBadge distinct rendering per source", () => {
       </>
     );
 
-    const metadata = screen.getByText(/metadata \(exact\)/).parentElement!;
-    const userSupplied = screen.getByText(/user supplied \(exact\)/).parentElement!;
-    const measured = screen.getByText(/measured \(exact\)/).parentElement!;
+    const metadata = screen.getByText(/metadata/).parentElement!;
+    const userSupplied = screen.getByText(/user supplied/).parentElement!;
+    const measured = screen.getByText(/measured/).parentElement!;
     const estimated = screen.getByText(/estimated/).parentElement!;
     const hypothesis = screen.getByText(/hypothesis/).parentElement!;
     const unknown = screen.getByText(/unknown/).parentElement!;
 
+    // distinct text labels
     expect(metadata.textContent).not.toBe(userSupplied.textContent);
     expect(metadata.textContent).not.toBe(measured.textContent);
     expect(estimated.textContent).not.toBe(hypothesis.textContent);
     expect(hypothesis.textContent).not.toBe(unknown.textContent);
   });
 
-  it("renders exact sources without a confidence dot", () => {
+  it("renders exact sources with an 'exact' label", () => {
     render(<ProvenanceBadge source="metadata" confidence={0.99} />);
-    const el = screen.getByText(/metadata \(exact\)/).closest("span");
-    expect(el).not.toBeNull();
+    expect(screen.getByText("exact")).toBeInTheDocument();
   });
 });
 
@@ -75,7 +75,7 @@ describe("ProvenanceBadge (source x confidence)", () => {
         ))}
       </>
     );
-    const badges = screen.getAllByText(/metadata|user supplied|measured|estimated|hypothesis|unknown/);
+    const badges = screen.getAllByText(/metadata|user|measured|estimated|hypothesis|unknown/);
     expect(badges.length).toBe(SOURCES.length);
   });
 });
