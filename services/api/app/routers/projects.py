@@ -249,11 +249,15 @@ async def detect_bursts(
         s = project.selected_start_sample
         e = project.selected_end_sample
         samples = samples[s:e]
-        sr_for_detection = sr
     else:
-        sr_for_detection = sr
+        s, e = 0, len(samples)
 
-    bursts = dsp_detect_bursts(samples, sr_for_detection)
+    # Cap the analysis window like deep_analysis so the synchronous request
+    # stays bounded (real recordings can be 100s of MB — a full load OOMs).
+    window_end = min(len(samples), 200_000)
+    samples = samples[:window_end]
+
+    bursts = dsp_detect_bursts(samples, sr)
     stats = burst_stats(bursts)
 
     burst_responses = [BurstResponse(**b.__dict__) for b in bursts]
