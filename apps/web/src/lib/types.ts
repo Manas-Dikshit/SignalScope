@@ -132,6 +132,21 @@ export interface DashboardStats {
   running_jobs: Job[];
 }
 
+export interface Burst {
+  start_sample: number;
+  end_sample: number;
+  start_time_s: number;
+  end_time_s: number;
+  peak_power_db: number;
+  mean_power_db: number;
+  confidence: number;
+}
+
+export interface BurstDetection {
+  bursts: Burst[];
+  stats: Record<string, { name: string; value: number | string | null; unit: string | null; source: string; confidence: number | null }>;
+}
+
 export interface User {
   id: string;
   email: string;
