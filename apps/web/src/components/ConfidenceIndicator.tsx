@@ -180,7 +180,6 @@ export function MetricCard({
       className={cn(
         "rounded-lg border border-l-[3px] bg-card p-4 space-y-2 transition-all duration-200",
         accentBorder,
-        "border-l-primary",
         "hover:shadow-glow"
       )}
     >

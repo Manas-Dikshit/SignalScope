@@ -27,7 +27,7 @@ export default function DashboardPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-3 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-[110px] rounded-lg border bg-card shimmer" />
           ))}
