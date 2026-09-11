@@ -3,37 +3,254 @@
 @tailwind utilities;
 
 @layer base {
+  /* ── Dark palette (default) ────────────────────────────────────────
+       Base: #0B0F14 range (deep charcoal-navy)
+       Primary accent: Cyan — scientific, precise
+       Secondary: Violet — data series, supporting elements
+       Amber/Red: warnings/errors ONLY, never decoration                    */
   :root {
-    --background: 222 47% 6%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 8%;
-    --card-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 6%;
-    --secondary: 217 33% 14%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 14%;
-    --muted-foreground: 215 20% 55%;
-    --accent: 217 33% 17%;
-    --accent-foreground: 210 40% 98%;
+    /* Surfaces */
+    --background: 217 29% 6%;       /* #0B0F14 */
+    --foreground: 210 40% 96%;
+    --card: 217 26% 9%;             /* #111827-ish elevated */
+    --card-foreground: 210 40% 96%;
+    --popover: 217 26% 9%;
+    --popover-foreground: 210 40% 96%;
+
+    /* Primary — Cyan */
+    --primary: 187 92% 50%;         /* #22d3ee */
+    --primary-foreground: 217 29% 6%;
+
+    /* Secondary — Violet */
+    --secondary: 262 80% 58%;       /* #8b5cf6 */
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted */
+    --muted: 217 22% 12%;
+    --muted-foreground: 215 16% 52%;
+
+    /* Accent — subtle highlight */
+    --accent: 217 22% 15%;
+    --accent-foreground: 210 40% 96%;
+
+    /* Semantic — errors/warnings only */
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;          /* amber — warnings only */
+    --warning-foreground: 0 0% 100%;
+
+    /* Confidence tiers */
+    --confidence-high: 160 84% 40%;  /* emerald-500 */
+    --confidence-mid: 45 93% 47%;    /* amber-500 — only for confidence bars */
+    --confidence-low: 0 72% 51%;     /* red-500 — only for confidence bars */
+
+    /* Borders & inputs */
+    --border: 217 18% 16%;
+    --input: 217 18% 16%;
+    --ring: 187 92% 50%;             /* cyan */
+
+    /* Spacing scale (reference) */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Radius */
     --radius: 0.5rem;
+  }
+
+  /* ── Light palette ───────────────────────────────────────────────── */
+  @media (prefers-color-scheme: light) {
+    :root {
+      --background: 210 20% 98%;
+      --foreground: 217 29% 10%;
+      --card: 0 0% 100%;
+      --card-foreground: 217 29% 10%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 217 29% 10%;
+
+      --primary: 187 85% 42%;
+      --primary-foreground: 0 0% 100%;
+
+      --secondary: 262 60% 48%;
+      --secondary-foreground: 0 0% 100%;
+
+      --muted: 220 14% 95%;
+      --muted-foreground: 220 9% 46%;
+
+      --accent: 220 14% 93%;
+      --accent-foreground: 217 29% 10%;
+
+      --destructive: 0 72% 51%;
+      --destructive-foreground: 0 0% 100%;
+
+      --border: 220 13% 91%;
+      --input: 220 13% 91%;
+      --ring: 187 85% 42%;
+
+      --confidence-high: 160 70% 35%;
+      --confidence-mid: 45 80% 42%;
+      --confidence-low: 0 65% 46%;
+    }
   }
 }
 
 @layer base {
-  * {
+  *,
+  *::before,
+  *::after {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Scrollbar — subtle, premium */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(217 18% 22%);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(217 18% 30%);
+  }
+
+  ::selection {
+    background: hsl(187 92% 50% / 0.2);
   }
 }
 
+/* ── Component layers ──────────────────────────────────────────────── */
+
+@layer components {
+  /* Animated background blobs (login / hero) */
+  .aurora-bg {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .aurora-bg::before,
+  .aurora-bg::after {
+    content: "";
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.15;
+    animation: aurora-drift 20s ease-in-out infinite alternate;
+  }
+  .aurora-bg::before {
+    width: 600px;
+    height: 600px;
+    top: -200px;
+    left: -100px;
+    background: hsl(var(--primary));
+  }
+  .aurora-bg::after {
+    width: 500px;
+    height: 500px;
+    bottom: -200px;
+    right: -100px;
+    background: hsl(var(--secondary));
+    animation-delay: -10s;
+    animation-direction: alternate-reverse;
+  }
+
+  /* Fade-up reveal animation */
+  .reveal {
+    animation: fade-up 0.5s ease-out both;
+  }
+  .reveal-delay-1 { animation-delay: 0.1s; }
+  .reveal-delay-2 { animation-delay: 0.2s; }
+  .reveal-delay-3 { animation-delay: 0.3s; }
+
+  /* Card hover lift */
+  .card-hover {
+    transition: box-shadow 200ms ease-out, transform 200ms ease-out;
+  }
+  .card-hover:hover {
+    box-shadow: 0 8px 30px -12px hsl(var(--primary) / 0.12);
+    transform: translateY(-1px);
+  }
+
+  /* Loading shimmer */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--muted)) 25%,
+      hsl(var(--muted) / 0.5) 50%,
+      hsl(var(--muted)) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
+}
+
+/* ── Keyframes ────────────────────────────────────────────────────── */
+
+@keyframes aurora-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, 30px) scale(1.05); }
+  100% { transform: translate(-20px, 60px) scale(0.95); }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Utility classes ──────────────────────────────────────────────── */
+
 .drag-over {
   @apply border-primary bg-primary/5;
+}
+
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Confidence bar track */
+.confidence-track {
+  @apply relative h-1.5 w-full overflow-hidden rounded-full;
+  background: hsl(var(--muted));
+}
+.confidence-fill {
+  @apply absolute inset-y-0 left-0 rounded-full transition-all duration-300 ease-out;
+}
+
+/* Ranked hypothesis bar */
+.ranked-track {
+  @apply relative h-2 w-full overflow-hidden rounded-full;
+  background: hsl(var(--muted));
+}
+.ranked-fill {
+  @apply absolute inset-y-0 left-0 rounded-full transition-all duration-500 ease-out;
 }
