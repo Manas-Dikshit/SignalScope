@@ -546,7 +546,7 @@ export default function AnalysisWorkspacePage() {
               burstData={burstData}
               detectBursts={detectBursts}
               duration={duration}
-              burstStats={burstStats}
+              burstStats={burstStats ?? undefined}
             />
           ) : !analysis ? (
             <div className="py-10 text-center text-sm text-muted-foreground">

@@ -14,7 +14,7 @@ import {
   Clock,
   Radio,
   Plus,
-  Waveform,
+  FileAudio,
 } from "lucide-react";
 
 export default function RecordingsPage() {
@@ -101,7 +101,7 @@ export default function RecordingsPage() {
         <Card className="reveal reveal-delay-1">
           <CardContent className="flex flex-col items-center justify-center py-14">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/10">
-              <Waveform className="h-7 w-7 text-secondary" />
+              <FileAudio className="h-7 w-7 text-secondary" />
             </div>
             <p className="text-lg font-display font-semibold">No recordings</p>
             <p className="mt-1 mb-5 text-sm text-muted-foreground">
