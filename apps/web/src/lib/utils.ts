@@ -65,3 +65,27 @@ export function downsamplePair(
   }
   return { x: rx, y: ry };
 }
+
+/**
+ * SVG polyline points for a real sample array, normalized to the thumb box
+ * with a small margin around the vertical range.
+ */
+export function waveformPoints(samples: number[], width = 96, height = 40): string {
+  if (samples.length === 0) return "";
+  const pts = downsample(samples, Math.max(8, Math.floor(width / 2)));
+  let min = Infinity;
+  let max = -Infinity;
+  for (const v of pts) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
+  const span = max - min || 1;
+  const mid = height / 2;
+  return pts
+    .map((v, i) => {
+      const x = (i / (pts.length - 1)) * width;
+      const y = mid - ((v - (min + span / 2)) / span) * (height - 6);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+}

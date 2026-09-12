@@ -18,47 +18,56 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1 reveal">
-        <h1 className="font-display text-2xl font-semibold tracking-tight">
-          Dashboard
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          Overview of your RF analysis workspace.
-        </p>
-      </div>
+      {/* Hero — waveform backdrop + glass panel. Parallax on scroll. */}
+      <section className="relative overflow-hidden rounded-2xl glass-panel shadow-elevation-2 reveal">
+        <SignalBackdrop variant="hero" />
+        <div className="relative z-10 space-y-6 p-6 sm:p-8">
+          <div className="space-y-1">
+            <p className="text-sm uppercase tracking-[0.25em] text-primary/90 font-medium">
+              RF Intelligence Workbench
+            </p>
+            <h1 className="font-display text-2xl font-semibold tracking-tight">
+              Dashboard
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Overview of your RF analysis workspace.
+            </p>
+          </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-[110px] rounded-lg border bg-card shimmer" />
-          ))}
+          {isLoading ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-[110px] rounded-lg border bg-card shimmer" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="rounded-lg border border-destructive/40 p-6 text-sm text-destructive">
+              Failed to load dashboard data.
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 reveal reveal-delay-1">
+              <MetricCard
+                label="Recordings"
+                value={stats?.recording_count ?? 0}
+                accent="primary"
+                className="card-hover"
+              />
+              <MetricCard
+                label="Projects"
+                value={stats?.project_count ?? 0}
+                accent="secondary"
+                className="card-hover"
+              />
+              <MetricCard
+                label="Active Jobs"
+                value={stats?.running_jobs?.length ?? 0}
+                accent={stats?.running_jobs?.length ? "warning" : "primary"}
+                className="card-hover"
+              />
+            </div>
+          )}
         </div>
-      ) : error ? (
-        <div className="rounded-lg border border-destructive/40 p-6 text-sm text-destructive">
-          Failed to load dashboard data.
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 reveal reveal-delay-1">
-          <MetricCard
-            label="Recordings"
-            value={stats?.recording_count ?? 0}
-            accent="primary"
-            className="card-hover"
-          />
-          <MetricCard
-            label="Projects"
-            value={stats?.project_count ?? 0}
-            accent="secondary"
-            className="card-hover"
-          />
-          <MetricCard
-            label="Active Jobs"
-            value={stats?.running_jobs?.length ?? 0}
-            accent={stats?.running_jobs?.length ? "warning" : "primary"}
-            className="card-hover"
-          />
-        </div>
-      )}
+      </section>
 
       {/* Running jobs */}
       {stats?.running_jobs && stats.running_jobs.length > 0 && (
