@@ -14,6 +14,7 @@ import { MetricCard } from "@/components/ConfidenceIndicator";
 import { RankedBars } from "@/components/RankedBar";
 import { SectionTabs } from "@/components/SectionTabs";
 import { BurstTimeline } from "@/components/BurstTimeline";
+import BlueprintBackground from "@/components/BlueprintBackground";
 import { formatBytes, formatDuration, formatFrequency, downsamplePair } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import { CHART_TRACE_COLORS } from "@/lib/tokens";
@@ -285,7 +286,9 @@ export default function AnalysisWorkspacePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      <BlueprintBackground />
+      <div className="relative z-10 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between reveal">
         <div className="min-w-0">
