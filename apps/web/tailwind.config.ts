@@ -97,6 +97,9 @@ const config: Config = {
         glow: "0 0 20px -4px hsl(var(--primary) / 0.15)",
         "glow-lg": "0 0 40px -8px hsl(var(--primary) / 0.2)",
         elevated: "0 8px 30px -12px rgba(0, 0, 0, 0.4)",
+        "elevation-1": "var(--elevation-1)",
+        "elevation-2": "var(--elevation-2)",
+        "elevation-3": "var(--elevation-3)",
       },
       keyframes: {
         "fade-up": {
