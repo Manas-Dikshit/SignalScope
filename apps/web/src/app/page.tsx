@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { dashboardApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard } from "@/components/ConfidenceIndicator";
+import SignalBackdrop from "@/components/SignalBackdrop";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import Link from "next/link";
 import { ArrowRight, FolderOpen, Radio } from "lucide-react";
