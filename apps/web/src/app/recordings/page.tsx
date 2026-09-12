@@ -1,18 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query";
 import { recordingsApi, projectsApi } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadWizard } from "@/components/UploadWizard";
+import WaveformThumb from "@/components/WaveformThumb";
 import { formatBytes, formatDuration, formatFrequency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
 import {
   Upload,
   Trash2,
   Clock,
-  Radio,
   Plus,
   FileAudio,
 } from "lucide-react";
@@ -26,6 +26,16 @@ export default function RecordingsPage() {
     queryKey: ["recordings"],
     queryFn: recordingsApi.list,
   });
+
+  const previews = useQueries({
+    queries: (recordings ?? []).map((rec) => ({
+      queryKey: ["preview", rec.id],
+      queryFn: () => recordingsApi.preview(rec.id),
+    })),
+  });
+  const previewByRecording = new Map(
+    previews.map((p, i) => [recordings?.[i]?.id, p.data])
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => recordingsApi.delete(id),
@@ -117,12 +127,21 @@ export default function RecordingsPage() {
         <div className="space-y-3">
           {recordings.map((rec) => {
             const meta = rec.metadata_entry;
+            const preview = previewByRecording.get(rec.id);
             return (
-              <Card key={rec.id} className="card-hover reveal">
+              <Card key={rec.id} className="card-hover shadow-elevation-1 reveal">
                 <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                      <Radio className="h-5 w-5 text-primary" />
+                    <div className="h-14 w-28 shrink-0 overflow-hidden rounded-lg border bg-card shadow-elevation-1">
+                      {preview ? (
+                        <WaveformThumb
+                          samplesReal={preview.samples_real}
+                          samplesImag={preview.samples_imag}
+                          className="h-full w-full"
+                        />
+                      ) : (
+                        <div className="h-full w-full shimmer" />
+                      )}
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="font-medium truncate">
