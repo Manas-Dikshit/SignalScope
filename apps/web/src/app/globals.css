@@ -207,6 +207,39 @@
     transform: translateY(-1px);
   }
 
+  /* Frosted panel — hero/CTA surfaces only (content cards stay opaque) */
+  .glass-panel {
+    background: hsl(var(--glass-bg));
+    border: 1px solid hsl(var(--glass-border));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  }
+
+  /* Blueprint grid — analysis workspace backdrop (Together-style drafting) */
+  .blueprint-grid {
+    background-image: linear-gradient(hsl(var(--border) / 0.4) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.4) 1px, transparent 1px),
+      linear-gradient(hsl(var(--border) / 0.8) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.8) 1px, transparent 1px);
+    background-size: 16px 16px, 16px 16px, 96px 96px, 96px 96px;
+  }
+
+  /* Signal traces — slow ambient drift (motion-reduced users get static) */
+  .signal-traces {
+    transform-origin: center;
+    animation: signal-drift 30s ease-in-out infinite alternate;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .signal-traces {
+      animation: none;
+    }
+  }
+
+  /* Parallax layer — hero variant of SignalBackdrop */
+  .signal-parallax {
+    will-change: transform;
+  }
+
   /* Loading shimmer */
   .shimmer {
     background: linear-gradient(
@@ -226,6 +259,11 @@
   0% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(40px, 30px) scale(1.05); }
   100% { transform: translate(-20px, 60px) scale(0.95); }
+}
+
+@keyframes signal-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1.01); }
+  100% { transform: translate3d(-12px, -8px, 0) scale(1.03); }
 }
 
 @keyframes fade-up {
