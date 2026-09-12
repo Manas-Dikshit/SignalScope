@@ -39,9 +39,10 @@ def viterbi_decode(coded_bits: np.ndarray, constraint_length: int = 7,
                     traceback_depth: int | None = None) -> ViterbiResult:
     """Hard-decision Viterbi decoder for the rate-1/2 code above.
 
-    This is a straightforward reference implementation (O(2^K * N)) suitable for
-    the MVP's frame sizes; a production build would use GNU Radio's optimized FEC
-    blocks for large recordings.
+    The trellis step is vectorized with numpy (one small-array op per symbol
+    instead of a Python loop over all 2^K states), so MVP frame sizes decode
+    fast without extra dependencies; a production build would use GNU Radio's
+    optimized FEC blocks for large recordings.
     """
     g0 = _poly_bits(generators[0], constraint_length)
     g1 = _poly_bits(generators[1], constraint_length)
@@ -55,20 +56,35 @@ def viterbi_decode(coded_bits: np.ndarray, constraint_length: int = 7,
     if n_symbols == 0:
         return ViterbiResult(np.array([], dtype=np.uint8), 0.0, traceback_depth, ["No input bits."])
 
-    # precompute transition outputs for every (state, input_bit)
-    trans_out = {}
-    trans_next = {}
+    # Transition tables: next_state[s, b], out0[s, b], out1[s, b].
+    next_state = np.zeros((n_states, 2), dtype=np.int64)
+    out0 = np.zeros((n_states, 2), dtype=np.uint8)
+    out1 = np.zeros((n_states, 2), dtype=np.uint8)
     for state in range(n_states):
         state_bits = [(state >> i) & 1 for i in range(constraint_length - 2, -1, -1)]
         for bit in (0, 1):
             reg = [bit] + state_bits
             o0 = sum(x * y for x, y in zip(reg, g0)) % 2
             o1 = sum(x * y for x, y in zip(reg, g1)) % 2
-            next_state = 0
+            nxt = 0
             for v in reg[:-1]:
-                next_state = (next_state << 1) | v
-            trans_out[(state, bit)] = (o0, o1)
-            trans_next[(state, bit)] = next_state
+                nxt = (nxt << 1) | v
+            next_state[state, bit] = nxt
+            out0[state, bit] = o0
+            out1[state, bit] = o1
+
+    # Predecessor tables: every state has exactly two incoming edges.
+    # Built iterating states ascending, bit 0 then 1, so pred[:, 0] is the
+    # predecessor the old strict-`<` loop preferred on ties (same decoding).
+    pred = np.full((n_states, 2), -1, dtype=np.int64)
+    pred_bit = np.zeros((n_states, 2), dtype=np.int64)
+    fill = np.zeros(n_states, dtype=np.int64)
+    for s in range(n_states):
+        for b in (0, 1):
+            nxt = next_state[s, b]
+            pred[nxt, fill[nxt]] = s
+            pred_bit[nxt, fill[nxt]] = b
+            fill[nxt] += 1
 
     INF = float("inf")
     path_metrics = np.full(n_states, INF)
@@ -83,21 +99,17 @@ def viterbi_decode(coded_bits: np.ndarray, constraint_length: int = 7,
 
     for t in range(n_symbols):
         r0, r1 = coded_bits[2 * t], coded_bits[2 * t + 1]
-        new_metrics = np.full(n_states, INF)
-        new_survivors = np.full(n_states, -1, dtype=np.int64)
-        for state in range(n_states):
-            if path_metrics[state] == INF:
-                continue
-            for bit in (0, 1):
-                o0, o1 = trans_out[(state, bit)]
-                branch_metric = (o0 != r0) + (o1 != r1)  # Hamming distance
-                metric = path_metrics[state] + branch_metric
-                nxt = trans_next[(state, bit)]
-                if metric < new_metrics[nxt]:
-                    new_metrics[nxt] = metric
-                    new_survivors[nxt] = state
-        path_metrics = new_metrics
-        survivors[t] = new_survivors
+        # True Hamming branch metric in {0, 1, 2}. (Note: the previous loop
+        # version summed two numpy bools, and numpy bool+bool saturates to bool,
+        # so a double-bit mismatch cost 1 instead of 2 — and the penalty even
+        # depended on the input's dtype. Casting before adding fixes both.)
+        branch = (out0 != r0).astype(np.float64) + (out1 != r1).astype(np.float64)
+        cand = path_metrics[:, None] + branch  # cand[s, b]: metric via (state s, input b)
+        m0 = cand[pred[:, 0], pred_bit[:, 0]]
+        m1 = cand[pred[:, 1], pred_bit[:, 1]]
+        use1 = m1 < m0  # strict: ties keep pred[:, 0], matching the old loop
+        path_metrics = np.where(use1, m1, m0)
+        survivors[t] = np.where(use1, pred[:, 1], pred[:, 0])
         if np.all(path_metrics == INF):
             warnings.append(f"Path metrics diverged at symbol {t}; input may not match this code.")
             path_metrics[0] = 0.0

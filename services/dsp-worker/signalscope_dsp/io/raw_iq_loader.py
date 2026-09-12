@@ -49,14 +49,13 @@ def load_raw_iq(path: str | Path, fmt: RawIQFormat) -> Recording:
 
     if fmt.dtype in ("uint8", "uint16") and fmt.signed_offset:
         midpoint = float(np.iinfo(DTYPE_MAP[fmt.dtype]).max + 1) / 2.0
-        raw = raw.astype(np.float64) - midpoint
+        raw = (raw.astype(np.float64) - midpoint) / midpoint
     else:
         raw = raw.astype(np.float64)
-
-    if not np.issubdtype(DTYPE_MAP[fmt.dtype], np.floating):
-        info = np.iinfo(DTYPE_MAP[fmt.dtype])
-        scale = max(abs(info.min), info.max)
-        raw = raw / scale
+        if not np.issubdtype(DTYPE_MAP[fmt.dtype], np.floating):
+            info = np.iinfo(DTYPE_MAP[fmt.dtype])
+            scale = max(abs(info.min), info.max)
+            raw = raw / scale
 
     warnings: list[str] = []
 
