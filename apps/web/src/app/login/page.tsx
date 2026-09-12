@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogoMark } from "@/components/LogoMark";
-import { SignalBackdrop } from "@/components/SignalBackdrop";
+import SignalBackdrop from "@/components/SignalBackdrop";
 import { useToast } from "@/components/ui/toast";
 import { Loader2 } from "lucide-react";
 
@@ -103,7 +103,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4">
-      <div className="aurora-bg" aria-hidden />
+      <SignalBackdrop />{/* waveform traces + aurora blobs, aria-hidden */}
 
       <div className="w-full max-w-md space-y-8 py-12">
         {/* Hero statement */}
@@ -128,7 +128,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border bg-card p-6 shadow-xl reveal reveal-delay-1">
+        <div className="glass-panel rounded-2xl p-6 shadow-elevation-3 reveal reveal-delay-1">
           {mode === "login" ? (
             <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
               <div className="space-y-2">
