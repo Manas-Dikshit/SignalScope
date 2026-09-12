@@ -771,6 +771,7 @@ export default function AnalysisWorkspacePage() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }
