@@ -79,6 +79,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
               max={max}
               step={step}
               value={values[0]}
+              aria-label="Lower bound"
               onChange={handleMinChange}
               className="absolute w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:shadow-md"
               {...props}
@@ -89,6 +90,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
               max={max}
               step={step}
               value={values[1]}
+              aria-label="Upper bound"
               onChange={handleMaxChange}
               className="absolute w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:shadow-md"
             />
@@ -100,6 +102,7 @@ const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
             max={max}
             step={step}
             value={values[0]}
+            aria-label="Slider value"
             onChange={handleMinChange}
             className="absolute w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:bg-background [&::-webkit-slider-thumb]:shadow-md"
             {...props}

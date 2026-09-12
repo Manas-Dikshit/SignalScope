@@ -9,6 +9,7 @@
        Secondary: Violet — data series, supporting elements
        Amber/Red: warnings/errors ONLY, never decoration                    */
   :root {
+    color-scheme: dark;
     /* Surfaces */
     --background: 217 29% 6%;       /* #0B0F14 */
     --foreground: 210 40% 96%;
@@ -71,52 +72,6 @@
     --glass-border: 210 40% 96% / 0.14;
     --glass-blur: 18px;
     --glass-saturate: 1.4;
-  }
-
-  /* ── Light palette ───────────────────────────────────────────────── */
-  @media (prefers-color-scheme: light) {
-    :root {
-      --background: 210 20% 98%;
-      --foreground: 217 29% 10%;
-      --card: 0 0% 100%;
-      --card-foreground: 217 29% 10%;
-      --popover: 0 0% 100%;
-      --popover-foreground: 217 29% 10%;
-
-      --primary: 187 85% 42%;
-      --primary-foreground: 0 0% 100%;
-
-      --secondary: 262 60% 48%;
-      --secondary-foreground: 0 0% 100%;
-
-      --muted: 220 14% 95%;
-      --muted-foreground: 220 9% 46%;
-
-      --accent: 220 14% 93%;
-      --accent-foreground: 217 29% 10%;
-
-      --destructive: 0 72% 51%;
-      --destructive-foreground: 0 0% 100%;
-
-      --border: 220 13% 91%;
-      --input: 220 13% 91%;
-      --ring: 187 85% 42%;
-
-      --confidence-high: 160 70% 35%;
-      --confidence-mid: 45 80% 42%;
-      --confidence-low: 0 65% 46%;
-
-      /* Elevation — soft, warm-tinted depth on light surfaces */
-      --elevation-1: 0 1px 2px rgb(15 23 42 / 0.06);
-      --elevation-2: 0 2px 6px rgb(15 23 42 / 0.08), 0 10px 24px rgb(15 23 42 / 0.08);
-      --elevation-3: 0 4px 12px rgb(15 23 42 / 0.1), 0 28px 56px -12px rgb(15 23 42 / 0.16);
-
-      /* Glass — bright frosted panel for light mode hero/CTA */
-      --glass-bg: 210 40% 98% / 0.72;
-      --glass-border: 217 29% 10% / 0.12;
-      --glass-blur: 18px;
-      --glass-saturate: 1.3;
-    }
   }
 }
 
