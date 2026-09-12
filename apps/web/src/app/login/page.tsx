@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogoMark } from "@/components/LogoMark";
+import { SignalBackdrop } from "@/components/SignalBackdrop";
 import { useToast } from "@/components/ui/toast";
 import { Loader2 } from "lucide-react";
 
