@@ -29,6 +29,8 @@ def detect_bursts(samples: np.ndarray, sample_rate: float, smoothing_ms: float =
     (floor + threshold_db_above_floor) are reported as bursts. Short bursts and
     small gaps are merged/dropped per the min_* parameters.
     """
+    if len(samples) == 0 or not sample_rate or sample_rate <= 0:
+        return []
     power = np.abs(samples) ** 2
     win_samples = max(1, int(sample_rate * smoothing_ms / 1000.0))
     kernel = np.ones(win_samples) / win_samples

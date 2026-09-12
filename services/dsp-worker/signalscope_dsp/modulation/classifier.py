@@ -44,7 +44,10 @@ def _freq_cluster_count(inst_freq: np.ndarray, sample_rate: float, max_clusters:
 def _mth_power_peakiness(samples: np.ndarray, m: int) -> float:
     """Classic M-th power method: raising a PSK signal with order M to the M-th power
     collapses the M phase states onto a single tone, producing a sharp spectral peak.
-    Returns a 0..1 'peakiness' score (peak power / mean power of the spectrum)."""
+    Returns a 0..1 'peakiness' score (peak power / mean power of the spectrum),
+    calibrated so a pure Hann-windowed tone scores ~0.9 and white noise ~0.0:
+    a pure tone gives peak/mean ≈ 0.665 * N (length-invariant, measured), so the
+    constant 3.5 maps it to 1 - exp(-3.5 * 0.665) ≈ 0.90."""
     raised = samples ** m
     spectrum = np.abs(np.fft.fft(raised * np.hanning(len(raised))))
     power = spectrum ** 2
@@ -53,8 +56,8 @@ def _mth_power_peakiness(samples: np.ndarray, m: int) -> float:
     if mean <= 0:
         return 0.0
     ratio = peak / mean
-    # squash into 0..1 with a soft ceiling
-    return float(1 - np.exp(-ratio / (5 * len(samples))))
+    # squash into 0..1 with a calibrated ceiling (see docstring)
+    return float(1 - np.exp(-3.5 * ratio / len(samples)))
 
 
 def _ring_count(samples: np.ndarray, n_bins: int = 32) -> int:
@@ -99,7 +102,7 @@ def classify_modulation(samples: np.ndarray, sample_rate: float) -> list[Modulat
     constant_envelope = env_var < 0.05
 
     if constant_envelope:
-        if 2 <= n_tones <= 2:
+        if n_tones == 2:
             add("2-FSK", 0.55 + 0.3 * min(n_tones / 2, 1),
                 [f"Constant envelope (var={env_var:.3f}); {n_tones} discrete instantaneous-frequency clusters at {['%.0f'%f for f in tone_freqs]} Hz"])
         elif n_tones in (3, 4):
@@ -109,9 +112,13 @@ def classify_modulation(samples: np.ndarray, sample_rate: float) -> list[Modulat
         p2 = _mth_power_peakiness(samples, 2)
         p4 = _mth_power_peakiness(samples, 4)
         p8 = _mth_power_peakiness(samples, 8)
+        # Differential scoring: a lower-order peak already explains any higher-order
+        # peak (e.g. BPSK squared is a pure tone, whose 4th/8th powers are tones too),
+        # so higher-order hypotheses only earn confidence from *unexplained* peakiness.
+        # Without this, BPSK and QPSK tie on BPSK input.
         add("BPSK", 0.3 + 0.6 * p2, [f"2nd-power spectral peakiness={p2:.2f} (BPSK collapses to a single tone under squaring)"])
-        add("QPSK", 0.3 + 0.6 * p4, [f"4th-power spectral peakiness={p4:.2f} (QPSK collapses to a single tone under 4th power)"])
-        add("8-PSK", 0.25 + 0.55 * p8, [f"8th-power spectral peakiness={p8:.2f}"])
+        add("QPSK", 0.3 + 0.6 * p4 * (1 - p2), [f"4th-power spectral peakiness={p4:.2f} beyond 2nd-power (QPSK collapses to a single tone under 4th power)"])
+        add("8-PSK", 0.25 + 0.55 * p8 * (1 - max(p2, p4)), [f"8th-power spectral peakiness={p8:.2f} beyond 2nd/4th-power"])
     else:
         if rings <= 2:
             add("OOK/ASK", 0.5 + 0.1 * rings, [f"Non-constant envelope (var={env_var:.3f}); {rings} amplitude level(s) detected"])
@@ -119,9 +126,13 @@ def classify_modulation(samples: np.ndarray, sample_rate: float) -> list[Modulat
             add("16-QAM", 0.45 + 0.05 * rings, [f"Non-constant envelope; {rings} amplitude rings detected (consistent with 16-QAM)"])
         else:
             add("64-QAM", 0.4, [f"Non-constant envelope; {rings} amplitude rings detected (consistent with a higher-order QAM)"])
-        # QAM constellations still show weak 4th-power peakiness from the QPSK-like quadrant structure
+        # QAM constellations still show weak 4th-power peakiness from the QPSK-like quadrant structure.
+        # Only relevant when multiple amplitude rings are present (pure OOK/ASK also
+        # shows strong M-th-power peakiness from its on/off carrier, which must NOT
+        # be misread as PSK evidence). Threshold 0.5 on the calibrated 0..1 scale:
+        # clean 16/64-QAM score ~0.2-0.3, clean QPSK ~0.9.
         p4 = _mth_power_peakiness(samples, 4)
-        if p4 > 0.3:
+        if rings > 2 and p4 > 0.5:
             add("QPSK", 0.2 + 0.3 * p4, [f"Some 4th-power peakiness ({p4:.2f}) despite amplitude variation; check for QAM vs QPSK+noise"])
 
     if not scores:

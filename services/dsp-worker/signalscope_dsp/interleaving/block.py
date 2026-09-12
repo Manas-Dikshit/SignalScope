@@ -1,11 +1,31 @@
 from __future__ import annotations
 
+import math
+import warnings
+
 import numpy as np
+
+
+def _check_block_fit(n_bits: int, rows: int, cols: int, op: str) -> None:
+    n = rows * cols
+    if n_bits > n:
+        warnings.warn(
+            f"{op}: input has {n_bits} bits but the {rows}x{cols} block holds "
+            f"{n}; {n_bits - n} trailing bit(s) will be dropped.",
+            UserWarning, stacklevel=3,
+        )
+    elif n_bits < n:
+        warnings.warn(
+            f"{op}: input has {n_bits} bits but the {rows}x{cols} block holds "
+            f"{n}; output is zero-padded to {n} bits.",
+            UserWarning, stacklevel=3,
+        )
 
 
 def block_interleave(bits: np.ndarray, rows: int, cols: int) -> np.ndarray:
     """Write bits row-wise into a rows x cols matrix, read out column-wise."""
     n = rows * cols
+    _check_block_fit(len(bits), rows, cols, "block_interleave")
     padded = np.zeros(n, dtype=bits.dtype)
     padded[: min(len(bits), n)] = bits[:n]
     matrix = padded.reshape(rows, cols)
@@ -15,6 +35,7 @@ def block_interleave(bits: np.ndarray, rows: int, cols: int) -> np.ndarray:
 def block_deinterleave(bits: np.ndarray, rows: int, cols: int) -> np.ndarray:
     """Inverse of block_interleave: write column-wise, read row-wise."""
     n = rows * cols
+    _check_block_fit(len(bits), rows, cols, "block_deinterleave")
     padded = np.zeros(n, dtype=bits.dtype)
     padded[: min(len(bits), n)] = bits[:n]
     matrix = padded.reshape(cols, rows).T
@@ -51,8 +72,21 @@ def convolutional_deinterleave(bits: np.ndarray, n_branches: int, delay_step: in
     return np.array(out, dtype=bits.dtype)
 
 
+def _check_diagonal_invertible(cols: int, offset: int) -> None:
+    # The placement c = (t*offset + r) % cols is a permutation (hence the
+    # interleave is lossless/invertible) iff gcd(offset, cols) == 1.
+    if math.gcd(offset, cols) != 1:
+        raise ValueError(
+            f"diagonal interleave requires gcd(offset, cols) == 1, got "
+            f"gcd({offset}, {cols}) = {math.gcd(offset, cols)}: placements would "
+            f"collide and silently overwrite bits."
+        )
+
+
 def diagonal_interleave(bits: np.ndarray, rows: int, cols: int, offset: int = 1) -> np.ndarray:
     n = rows * cols
+    _check_diagonal_invertible(cols, offset)
+    _check_block_fit(len(bits), rows, cols, "diagonal_interleave")
     padded = np.zeros(n, dtype=bits.dtype)
     padded[: min(len(bits), n)] = bits[:n]
     matrix = np.zeros((rows, cols), dtype=bits.dtype)
@@ -66,6 +100,25 @@ def diagonal_interleave(bits: np.ndarray, rows: int, cols: int, offset: int = 1)
         for r in range(rows):
             out[k] = matrix[r, c]
             k += 1
+    return out
+
+
+def diagonal_deinterleave(bits: np.ndarray, rows: int, cols: int, offset: int = 1) -> np.ndarray:
+    """Inverse of diagonal_interleave: the input is the column-major readout of
+    the permuted matrix, so rebuild the matrix first, then invert the
+    (row, col) placement permutation."""
+    n = rows * cols
+    _check_diagonal_invertible(cols, offset)
+    _check_block_fit(len(bits), rows, cols, "diagonal_deinterleave")
+    padded = np.zeros(n, dtype=bits.dtype)
+    padded[: min(len(bits), n)] = bits[:n]
+    # column-major flatten of M == row-major flatten of M.T
+    matrix = padded.reshape(cols, rows).T
+    out = np.zeros(n, dtype=bits.dtype)
+    for i in range(n):
+        r = i % rows
+        c = (i // rows * offset + r) % cols
+        out[i] = matrix[r, c]
     return out
 
 

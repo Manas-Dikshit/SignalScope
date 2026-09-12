@@ -13,16 +13,27 @@ class CorrelationMatch:
 
 
 def autocorrelate_bits(bits: np.ndarray, max_lag: int | None = None) -> np.ndarray:
+    """Normalized autocorrelation of {0,1} bits (mapped to {-1,+1}) via FFT.
+
+    Identical output to the naive O(N * lag) loop it replaces: linear
+    (non-circular) autocorrelation, normalized by max abs value. Lags beyond
+    the input length read as 0, matching the old loop's empty-overlap sums.
+    """
     x = bits.astype(np.float64) * 2 - 1  # map {0,1} -> {-1,+1}
     n = len(x)
     max_lag = max_lag or n // 2
-    result = np.zeros(max_lag)
-    for lag in range(max_lag):
-        if lag == 0:
-            result[lag] = np.sum(x * x)
-        else:
-            result[lag] = np.sum(x[:-lag] * x[lag:])
-    return result / (np.max(np.abs(result)) + 1e-12)
+    if n == 0:
+        return np.zeros(max_lag)
+    size = 1
+    while size < 2 * n - 1:
+        size *= 2
+    spectrum = np.abs(np.fft.rfft(x, n=size)) ** 2
+    corr = np.fft.irfft(spectrum, n=size)[:n]
+    if max_lag > n:
+        corr = np.concatenate([corr, np.zeros(max_lag - n)])
+    else:
+        corr = corr[:max_lag]
+    return corr / (np.max(np.abs(corr)) + 1e-12)
 
 
 def cross_correlate_bits(bits_a: np.ndarray, bits_b: np.ndarray) -> np.ndarray:
@@ -34,17 +45,24 @@ def cross_correlate_bits(bits_a: np.ndarray, bits_b: np.ndarray) -> np.ndarray:
 
 def sliding_pattern_match(bits: np.ndarray, pattern: np.ndarray, tolerance_bits: int = 0,
                            bit_order: str = "msb_first") -> list[CorrelationMatch]:
+    """Vectorized sliding-window search: same matches/scores as the naive loop
+    (ascending offsets, score = 1 - hamming/len), computed with one strided
+    comparison instead of a Python loop per offset."""
     if bit_order == "lsb_first":
         pattern = pattern[::-1]
-    matches = []
     p_len = len(pattern)
-    for offset in range(len(bits) - p_len + 1):
-        window = bits[offset: offset + p_len]
-        hd = int(np.sum(window != pattern))
-        if hd <= tolerance_bits:
-            score = 1.0 - hd / max(p_len, 1)
-            matches.append(CorrelationMatch(offset=offset, score=score, hamming_distance=hd))
-    return matches
+    n_windows = len(bits) - p_len + 1
+    if p_len == 0 or n_windows <= 0:
+        return []
+    windows = np.lib.stride_tricks.sliding_window_view(bits, p_len)
+    hamming = np.sum(windows != pattern, axis=1)
+    offsets = np.where(hamming <= tolerance_bits)[0]
+    denom = max(p_len, 1)
+    return [
+        CorrelationMatch(offset=int(o), score=1.0 - int(hamming[o]) / denom,
+                         hamming_distance=int(hamming[o]))
+        for o in offsets
+    ]
 
 
 def find_repeated_sequences(bits: np.ndarray, seq_length: int, min_repeats: int = 2) -> list[dict]:

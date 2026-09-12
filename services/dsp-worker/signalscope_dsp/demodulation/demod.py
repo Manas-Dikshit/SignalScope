@@ -4,16 +4,11 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-# --- Gray-coded reference constellations -----------------------------------
+# --- Reference constellations (direct binary mapping, not Gray-coded) --------
 
 def _psk_constellation(order: int) -> np.ndarray:
-    k = int(np.log2(order))
     angles = 2 * np.pi * np.arange(order) / order
     return np.exp(1j * angles)
-
-
-def _gray_code(n_bits: int) -> list[int]:
-    return [(i ^ (i >> 1)) for i in range(2 ** n_bits)]
 
 
 def _qam_constellation(order: int) -> np.ndarray:
@@ -95,11 +90,16 @@ def demod_qam(samples: np.ndarray, order: int, samples_per_symbol: int) -> Demod
     bits_per_symbol = int(np.log2(order))
     sym_samples = _slice_to_symbols(samples, samples_per_symbol)
 
-    peak = np.percentile(np.abs(sym_samples), 95)
-    if peak > 0:
-        sym_samples = sym_samples / peak
-
     ref = _qam_constellation(order)
+    # Blind gain match via RMS: the reference RMS is known exactly and RMS is
+    # rotation-invariant, so this is robust to residual carrier phase and to
+    # amplitude outliers. (The previous 95th-percentile normalization mismatched
+    # the transmitter scaling for 64-QAM, whose rare corner points sit above the
+    # 95th percentile, causing systematic slicing errors.)
+    ref_rms = float(np.sqrt(np.mean(np.abs(ref) ** 2)))
+    sym_rms = float(np.sqrt(np.mean(np.abs(sym_samples) ** 2)))
+    if sym_rms > 0:
+        sym_samples = sym_samples * (ref_rms / sym_rms)
     dists = np.abs(sym_samples[:, None] - ref[None, :])
     decisions = np.argmin(dists, axis=1)
 
@@ -116,7 +116,7 @@ def demod_qam(samples: np.ndarray, order: int, samples_per_symbol: int) -> Demod
     return DemodResult(
         hard_bits=hard_bits, soft_bits=soft, symbols=ref[decisions], symbol_indices=decisions,
         samples_per_symbol=samples_per_symbol, bits_per_symbol=bits_per_symbol,
-        warnings=["AGC applied via 95th-percentile amplitude normalization; no closed-loop carrier/timing recovery yet."],
+        warnings=["Blind RMS gain matching applied; no closed-loop carrier/timing recovery yet."],
     )
 
 
@@ -136,6 +136,9 @@ def demod_fsk(samples: np.ndarray, sample_rate: float, order: int, samples_per_s
     # samples of each span to reduce sensitivity to any residual edge transient.
     n_symbols = len(inst_freq) // samples_per_symbol
     guard = max(1, samples_per_symbol // 5)
+    # Guard must stay below half the symbol span, otherwise the trimmed slice
+    # is empty (e.g. sps=2) and np.mean([]) yields NaN tones/decisions.
+    guard = min(guard, (samples_per_symbol - 1) // 2)
     sym_freqs = np.array([
         np.mean(inst_freq[i * samples_per_symbol + guard: (i + 1) * samples_per_symbol - guard])
         for i in range(n_symbols)

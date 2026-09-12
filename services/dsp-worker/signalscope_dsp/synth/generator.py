@@ -8,41 +8,6 @@ import numpy as np
 from ..fec.convolutional import convolutional_encode
 
 
-def _rc_filter(beta: float, span: int, sps: int) -> np.ndarray:
-    """Full raised-cosine pulse. Used (instead of root-raised-cosine) as the sole
-    transmit-side pulse shape because this MVP's demodulators sample symbol centers
-    directly without a matched receive filter — RC gives zero inter-symbol
-    interference at symbol-spaced sample instants on its own, whereas RRC only does
-    when paired with an identical matched filter at the receiver."""
-    n = span * sps
-    t = (np.arange(-n / 2, n / 2 + 1)) / sps
-    h = np.zeros_like(t)
-    for i, ti in enumerate(t):
-        if abs(1 - (2 * beta * ti) ** 2) < 1e-8:
-            h[i] = (np.pi / 4) * np.sinc(1 / (2 * beta))
-        else:
-            h[i] = np.sinc(ti) * np.cos(np.pi * beta * ti) / (1 - (2 * beta * ti) ** 2)
-    return h / np.sum(h)
-
-
-def _rrc_filter(beta: float, span: int, sps: int) -> np.ndarray:
-    n = span * sps
-    t = (np.arange(-n / 2, n / 2 + 1)) / sps
-    h = np.zeros_like(t)
-    for i, ti in enumerate(t):
-        if abs(ti) < 1e-8:
-            h[i] = 1.0 - beta + 4 * beta / np.pi
-        elif beta != 0 and abs(abs(ti) - 1 / (4 * beta)) < 1e-8:
-            h[i] = (beta / np.sqrt(2)) * (
-                (1 + 2 / np.pi) * np.sin(np.pi / (4 * beta)) + (1 - 2 / np.pi) * np.cos(np.pi / (4 * beta))
-            )
-        else:
-            num = np.sin(np.pi * ti * (1 - beta)) + 4 * beta * ti * np.cos(np.pi * ti * (1 + beta))
-            den = np.pi * ti * (1 - (4 * beta * ti) ** 2)
-            h[i] = num / den
-    return h / np.sqrt(np.sum(h ** 2))
-
-
 @dataclass
 class SynthConfig:
     modulation: str = "qpsk"  # ook, 2fsk, 4fsk, bpsk, qpsk, 8psk, 16qam, 64qam
@@ -52,8 +17,6 @@ class SynthConfig:
     snr_db: float = 15.0
     n_symbols: int = 2000
     fsk_deviation_hz: float = 5_000.0
-    rrc_beta: float = 0.35
-    rrc_span: int = 8
     apply_conv_code: bool = False
     burst: bool = False
     burst_on_symbols: int = 500
