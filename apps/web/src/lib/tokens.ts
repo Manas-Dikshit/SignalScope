@@ -62,6 +62,33 @@ export const SPACING = {
   gridGap: "gap-4",
 } as const;
 
+/**
+ * Elevation scale — three tiers of depth shadow on dark surfaces.
+ * Consumed via Tailwind `shadow-elevation-{1|2|3}` (CSS vars).
+ * e3 reserved for floating panels (modals, login card on hero).
+ */
+export const ELEVATION = {
+  e1: "0 1px 2px hsl(217 40% 3% / 0.4), 0 1px 3px hsl(217 40% 3% / 0.25)",
+  e2: "0 2px 6px hsl(217 40% 3% / 0.35), 0 10px 24px hsl(217 40% 3% / 0.28)",
+  e3: "0 4px 12px hsl(217 40% 3% / 0.45), 0 28px 56px -12px hsl(217 40% 3% / 0.6)",
+} as const;
+
+/**
+ * Procedural waveform-art colors — layered signal traces, glow, and the
+ * blueprint grid on the analysis workspace. Keep cyan/violet only; amber/red
+ * stay semantic.
+ */
+export const WAVEFORM_ART = {
+  trace: PALETTE.primary,
+  traceSoft: "#a5f3fc",
+  traceViolet: PALETTE.secondary,
+  glow: "rgba(34, 211, 238, 0.18)",
+  glowViolet: "rgba(139, 92, 246, 0.16)",
+  grid: "hsla(217, 18%, 62%, 0.08)",
+  gridMajor: "hsla(217, 18%, 62%, 0.16)",
+  corner: "hsla(187, 92%, 50%, 0.35)",
+} as const;
+
 export function confidenceColor(confidence: number | null): string {
   if (confidence === null) return PALETTE.mutedForeground;
   if (confidence >= 0.7) return PALETTE.confidence.high;
