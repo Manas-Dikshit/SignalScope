@@ -178,7 +178,7 @@ export function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-lg border border-l-[3px] bg-card p-4 space-y-2 transition-all duration-200",
+        "rounded-lg border border-l-[3px] bg-card p-4 space-y-2 shadow-elevation-1 transition-all duration-200",
         accentBorder,
         "hover:shadow-glow"
       )}
