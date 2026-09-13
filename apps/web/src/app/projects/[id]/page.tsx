@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { PlotlyChart, CHART_WATERFALL_COLORSCALE } from "@/components/PlotlyChart";
+import { GraphToggle } from "@/components/GraphToggle";
 import { ProvenanceBadge } from "@/components/ProvenanceBadge";
 import { MetricCard } from "@/components/ConfidenceIndicator";
 import { RankedBars } from "@/components/RankedBar";
@@ -262,6 +263,47 @@ export default function AnalysisWorkspacePage() {
   const burstStats = burstData && Object.entries(burstData.stats).filter(([k]) =>
     ["burst_count", "burst_duration_s", "repetition_interval_s", "duty_cycle"].includes(k)
   );
+
+  const featureProfileData: Data[] = analysisFeatures.length
+    ? [{
+        y: analysisFeatures.map((f) => `${f.meta?.label ?? f.name}${f.meta?.unit ? ` (${f.meta.unit})` : ""}`),
+        x: analysisFeatures.map((f) => (f.value === null ? 0 : f.value)),
+        type: "bar",
+        orientation: "h",
+        marker: { color: CHART_TRACE_COLORS.primary },
+        text: analysisFeatures.map((f) => (f.value === null ? "—" : f.value.toLocaleString())),
+        textposition: "outside",
+        cliponaxis: false,
+      }]
+    : [];
+
+  const numericEstimates = estimates
+    .map((e) => ({
+      name: e.parameter_name.replaceAll("_", " "),
+      value: e.value_json?.value as number | null,
+      unit: e.value_json?.unit as string | null,
+    }))
+    .filter((e): e is { name: string; value: number; unit: string | null } => typeof e.value === "number");
+
+  const estimatesBarData: Data[] = numericEstimates.length
+    ? [{
+        x: numericEstimates.map((e) => `${e.name}${e.unit ? ` (${e.unit})` : ""}`),
+        y: numericEstimates.map((e) => e.value),
+        type: "bar",
+        marker: { color: CHART_TRACE_COLORS.primary },
+      }]
+    : [];
+
+  const correlationOffsetsData: Data[] = analysis
+    ? analysis.correlation.sequences.map((s, i) => ({
+        x: s.offsets,
+        y: s.offsets.map(() => i),
+        type: "scatter",
+        mode: "markers",
+        name: s.pattern_hex,
+        marker: { size: 8, color: CHART_TRACE_COLORS.primary },
+      }))
+    : [];
 
   if (isLoading) {
     return (
@@ -584,6 +626,11 @@ export default function AnalysisWorkspacePage() {
                       />
                     ))}
                   </div>
+
+                  <GraphToggle
+                    data={featureProfileData}
+                    title="Spectral features at a glance"
+                  />
 
                   <div className="grid gap-3 lg:grid-cols-2">
                     <div className="rounded-lg border bg-card p-4 space-y-3">
