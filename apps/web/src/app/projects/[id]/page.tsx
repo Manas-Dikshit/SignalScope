@@ -764,6 +764,10 @@ export default function AnalysisWorkspacePage() {
                         </div>
                       ))}
                     </div>
+                    <GraphToggle
+                      data={correlationOffsetsData}
+                      title="Repeated-pattern locations across the bit stream"
+                    />
                   ) : (
                     <div className="py-8 text-center text-sm text-muted-foreground">
                       No repeated 24-bit patterns found in the decoded bit stream
@@ -810,6 +814,12 @@ export default function AnalysisWorkspacePage() {
                 />
               ))}
             </div>
+            {numericEstimates.length > 0 && (
+              <GraphToggle
+                data={estimatesBarData}
+                title="All parameter estimates at a glance"
+              />
+            )}
           ) : (
             <div className="py-10 text-center text-sm text-muted-foreground">
               No parameter estimates yet. Click &quot;Run Parameter Estimation&quot;
