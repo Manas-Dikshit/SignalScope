@@ -140,6 +140,82 @@ def plot_bit_timeline(bits, max_points=2000, title="Bit timeline"):
     return fig
 
 
+def _graph_expander(fig):
+    with st.expander("📈 View graphically", expanded=False):
+        st.plotly_chart(fig, use_container_width=True)
+
+
+def plot_confidence_bars(labels, confidences, title="Confidence"):
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=confidences, y=labels, orientation="h",
+                         marker=dict(color=confidences, colorscale="RdYlGn", cmin=0, cmax=1)))
+    fig.update_layout(height=300, margin=dict(l=10, r=10, t=30, b=10),
+                       xaxis=dict(title="Confidence", range=[0, 1]),
+                       yaxis=dict(autorange="reversed"), title=title)
+    return fig
+
+
+def plot_symbol_rate_candidates(candidates):
+    labels, vals, confs = [], [], []
+    for c in candidates:
+        if c.value is None:
+            continue
+        labels.append(f"{c.value:,.0f} Hz")
+        vals.append(c.value)
+        confs.append(c.confidence or 0.0)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=labels, y=vals, text=[f"{v:,.0f}" for v in vals], textposition="outside",
+                         marker=dict(color=confs, colorscale="Blues")))
+    fig.update_layout(height=300, margin=dict(l=10, r=10, t=30, b=10),
+                       xaxis_title="Candidate", yaxis_title="Symbol rate (Hz)",
+                       title="Symbol-rate candidates")
+    return fig
+
+
+def plot_feature_profile(feats):
+    labels = ["Occupied BW", "Peak freq", "Spectral centroid", "SNR", "Crest factor", "Spectral flatness"]
+    labels = [f"{l}<br><sub>{v:,.1f}</sub>" if v is not None else f"{l}<br><sub>—</sub>"
+              for l, v in zip(labels, [feats.occupied_bandwidth_hz, feats.peak_frequency_hz,
+                                       feats.spectral_centroid_hz, feats.snr_db, feats.crest_factor,
+                                       feats.spectral_flatness])]
+    vals = [v if v is not None else 0 for v in
+            [feats.occupied_bandwidth_hz, feats.peak_frequency_hz, feats.spectral_centroid_hz,
+             feats.snr_db, feats.crest_factor, feats.spectral_flatness]]
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=labels, y=vals))
+    fig.update_layout(height=300, margin=dict(l=10, r=10, t=30, b=10),
+                       yaxis_title="Value", title="Spectral & statistical feature profile")
+    return fig
+
+
+def plot_burst_overlay(samples, fs, bursts, max_points=20000):
+    n = len(samples)
+    step = max(1, n // max_points)
+    idx = np.arange(0, n, step)
+    t = idx / fs if fs else idx
+    fig = go.Figure()
+    fig.add_trace(go.Scattergl(x=t, y=np.abs(samples[idx]), line=dict(width=1), name="Envelope |x|"))
+    for b in bursts:
+        fig.add_vrect(x0=b.start_time_s, x1=b.end_time_s, fillcolor="rgba(255,60,60,0.15)", line_width=0)
+    fig.update_layout(height=300, margin=dict(l=10, r=10, t=30, b=10),
+                       xaxis_title="Time (s)" if fs else "Sample index", yaxis_title="Magnitude",
+                       title=f"Burst envelope — {len(bursts)} burst(s) shaded")
+    return fig
+
+
+def plot_correlation_matches(matches):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=[m.offset for m in matches], y=[m.score for m in matches],
+        mode="markers", text=[f"HD={m.hamming_distance}" for m in matches],
+        marker=dict(size=9, color=[m.hamming_distance for m in matches],
+                    colorscale="Viridis", showscale=True)))
+    fig.update_layout(height=300, margin=dict(l=10, r=10, t=30, b=10),
+                       xaxis_title="Offset (bit)", yaxis_title="Match score",
+                       title=f"Sync-word matches ({len(matches)})")
+    return fig
+
+
 # ---------------------------------------------------------------------------
 # Sidebar: data source
 # ---------------------------------------------------------------------------
@@ -370,6 +446,7 @@ with tabs[4]:
                 render_estimate("Repetition interval", stats["repetition_interval_s"], " s")
             with c3:
                 render_estimate("Duty cycle", stats["duty_cycle"])
+            _graph_expander(plot_burst_overlay(segment, fs, bursts))
     else:
         st.warning("Sample rate unknown — burst timing cannot be computed.")
 
@@ -386,6 +463,7 @@ with tabs[4]:
         with c3:
             render_estimate("Crest factor", feats.crest_factor)
             render_estimate("Spectral flatness", feats.spectral_flatness)
+        _graph_expander(plot_feature_profile(feats))
 
 with tabs[5]:
     st.subheader("Modulation classification")
@@ -400,12 +478,15 @@ with tabs[5]:
         "variance, M-th-power spectral peakiness, tone/ring clustering) — never a "
         "certainty."
     )
+    _graph_expander(plot_confidence_bars([h.label for h in hyps], [h.confidence or 0 for h in hyps],
+                                         title="Modulation classification confidence"))
 
     st.subheader("Symbol-rate candidates")
     if fs:
         candidates = estimate_symbol_rate_candidates(segment, fs)
         for c in candidates:
             render_estimate(f"Candidate: {c.value} Hz" if c.value else "Symbol rate", c)
+        _graph_expander(plot_symbol_rate_candidates(candidates))
     else:
         st.warning("Sample rate unknown — symbol rate cannot be estimated in Hz.")
 
@@ -547,6 +628,8 @@ with tabs[8]:
                 st.write(f"Found **{len(matches)}** match(es).")
                 for m in matches[:20]:
                     st.write(f"• offset {m.offset}, Hamming distance {m.hamming_distance}, score {m.score:.2f}")
+                if matches:
+                    _graph_expander(plot_correlation_matches(matches[:200]))
             except ValueError:
                 st.error("Could not parse hex pattern.")
 
