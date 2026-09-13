@@ -1,7 +1,9 @@
 import numpy as np
+import pytest
 
 from signalscope_dsp.interleaving.block import (
     block_interleave, block_deinterleave, convolutional_interleave, convolutional_deinterleave,
+    diagonal_interleave, diagonal_deinterleave,
 )
 from signalscope_dsp.correlation.correlate import sliding_pattern_match, find_repeated_sequences
 
@@ -45,3 +47,24 @@ def test_find_repeated_sequences_detects_header():
     results = find_repeated_sequences(bits, seq_length=8, min_repeats=3)
     assert results, "expected at least one repeated pattern"
     assert results[0]["repeat_count"] >= 3
+
+
+def test_diagonal_interleave_round_trip():
+    rng = np.random.default_rng(4)
+    for rows, cols, offset in ((8, 8, 1), (4, 16, 3), (5, 7, 3), (6, 9, 2)):
+        bits = rng.integers(0, 2, size=rows * cols).astype(np.uint8)
+        assert np.array_equal(bits, diagonal_deinterleave(diagonal_interleave(bits, rows, cols, offset), rows, cols, offset))
+
+
+def test_diagonal_interleave_rejects_non_coprime_offset():
+    bits = np.zeros(64, dtype=np.uint8)
+    with pytest.raises(ValueError, match="gcd"):
+        diagonal_interleave(bits, rows=16, cols=4, offset=2)
+
+
+def test_block_interleave_warns_on_truncation_and_padding():
+    rng = np.random.default_rng(5)
+    with pytest.warns(UserWarning, match="trailing bit"):
+        block_interleave(rng.integers(0, 2, size=70).astype(np.uint8), rows=8, cols=8)
+    with pytest.warns(UserWarning, match="zero-padded"):
+        block_deinterleave(rng.integers(0, 2, size=60).astype(np.uint8), rows=8, cols=8)

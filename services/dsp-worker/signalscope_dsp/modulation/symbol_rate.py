@@ -50,7 +50,7 @@ def estimate_symbol_rate_candidates(samples: np.ndarray, sample_rate: float, min
         conf = float(np.clip(search_band[idx] / total_power * 10, 0.1, 0.9))
         candidates.append(Estimate(
             name="symbol_rate", value=round(f, 1), unit="Hz", source=Source.ESTIMATED, confidence=conf,
-            evidence=["Spectral peak of |signal|^2 (cyclostationary symbol-clock feature)"],
+            evidence=["Spectral peak of |diff(signal)|^2 (cyclostationary symbol-clock feature)"],
         ))
         if len(candidates) >= max_candidates:
             break

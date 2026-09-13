@@ -22,6 +22,8 @@ def _demod_ber(cfg: SynthConfig) -> float:
         d = demod_psk(cond.samples, 8, result.sps)
     elif mod == "16qam":
         d = demod_qam(cond.samples, 16, result.sps)
+    elif mod == "64qam":
+        d = demod_qam(cond.samples, 64, result.sps)
     elif mod == "2fsk":
         d = demod_fsk(cond.samples, cfg.sample_rate_hz, 2, result.sps, cfg.fsk_deviation_hz)
     else:
@@ -48,17 +50,32 @@ def test_16qam_high_snr_low_ber():
     assert _demod_ber(cfg) < 0.1
 
 
+def test_64qam_high_snr_low_ber():
+    cfg = SynthConfig(modulation="64qam", snr_db=35, n_symbols=1000)
+    assert _demod_ber(cfg) < 0.1
+
+
 def test_2fsk_high_snr_low_ber():
     cfg = SynthConfig(modulation="2fsk", snr_db=25, n_symbols=1000, fsk_deviation_hz=8000)
     assert _demod_ber(cfg) < 0.1
 
 
-def test_modulation_classifier_identifies_qpsk_as_top_or_second():
-    cfg = SynthConfig(modulation="qpsk", snr_db=20, n_symbols=3000, carrier_offset_hz=0)
+def _top_label(modulation: str, seed: int = 42) -> str:
+    cfg = SynthConfig(modulation=modulation, snr_db=20, n_symbols=3000, carrier_offset_hz=0, seed=seed)
     result = generate_signal(cfg)
-    hyps = classify_modulation(result.samples, cfg.sample_rate_hz)
-    labels = [h.label for h in hyps]
-    assert "QPSK" in labels
+    return classify_modulation(result.samples, cfg.sample_rate_hz)[0].label
+
+
+def test_modulation_classifier_identifies_qpsk_top1():
+    assert _top_label("qpsk") == "QPSK"
+
+
+def test_modulation_classifier_top1_across_families():
+    assert _top_label("bpsk") == "BPSK"
+    assert _top_label("8psk") == "8-PSK"
+    assert _top_label("2fsk") == "2-FSK"
+    assert _top_label("16qam") == "16-QAM"
+    assert _top_label("ook") == "OOK/ASK"
 
 
 def test_symbol_rate_candidates_include_true_rate_within_tolerance():
