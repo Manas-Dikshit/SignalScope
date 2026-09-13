@@ -749,25 +749,27 @@ export default function AnalysisWorkspacePage() {
               {analysisTab === "correlation" && (
                 <div className="space-y-4">
                   {analysis.correlation.sequences.length > 0 ? (
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {analysis.correlation.sequences.map((s, i) => (
-                        <div key={i} className="rounded-lg border bg-card p-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-semibold">{s.pattern_hex}</span>
-                            <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">
-                              {s.repeat_count}x
-                            </span>
+                    <>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {analysis.correlation.sequences.map((s, i) => (
+                          <div key={i} className="rounded-lg border bg-card p-3 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-semibold">{s.pattern_hex}</span>
+                              <span className="rounded-full bg-secondary/10 px-2 py-0.5 text-[10px] font-medium text-secondary">
+                                {s.repeat_count}x
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground font-mono">
+                              offsets: {s.offsets.join(", ") || "—"}
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground font-mono">
-                            offsets: {s.offsets.join(", ") || "—"}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <GraphToggle
-                      data={correlationOffsetsData}
-                      title="Repeated-pattern locations across the bit stream"
-                    />
+                        ))}
+                      </div>
+                      <GraphToggle
+                        data={correlationOffsetsData}
+                        title="Repeated-pattern locations across the bit stream"
+                      />
+                    </>
                   ) : (
                     <div className="py-8 text-center text-sm text-muted-foreground">
                       No repeated 24-bit patterns found in the decoded bit stream
@@ -793,33 +795,35 @@ export default function AnalysisWorkspacePage() {
         </CardHeader>
         <CardContent>
           {estimates.length > 0 ? (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {estimates.map((est) => (
-                <MetricCard
-                  key={est.id}
-                  label={est.parameter_name.replaceAll("_", " ")}
-                  value={est.value_json?.value as number | string | null ?? null}
-                  unit={est.value_json?.unit as string | null ?? null}
-                  source={est.source as import("@/lib/types").Source}
-                  confidence={est.confidence}
-                  accent={
-                    est.parameter_name.includes("duty") ||
-                    est.parameter_name.includes("snr") ||
-                    est.parameter_name.includes("bandwidth")
-                      ? "primary"
-                      : "secondary"
-                  }
-                  rangeMin={est.parameter_name === "snr" ? -10 : undefined}
-                  rangeMax={est.parameter_name === "snr" ? 60 : undefined}
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {estimates.map((est) => (
+                  <MetricCard
+                    key={est.id}
+                    label={est.parameter_name.replaceAll("_", " ")}
+                    value={est.value_json?.value as number | string | null ?? null}
+                    unit={est.value_json?.unit as string | null ?? null}
+                    source={est.source as import("@/lib/types").Source}
+                    confidence={est.confidence}
+                    accent={
+                      est.parameter_name.includes("duty") ||
+                      est.parameter_name.includes("snr") ||
+                      est.parameter_name.includes("bandwidth")
+                        ? "primary"
+                        : "secondary"
+                    }
+                    rangeMin={est.parameter_name === "snr" ? -10 : undefined}
+                    rangeMax={est.parameter_name === "snr" ? 60 : undefined}
+                  />
+                ))}
+              </div>
+              {numericEstimates.length > 0 && (
+                <GraphToggle
+                  data={estimatesBarData}
+                  title="All parameter estimates at a glance"
                 />
-              ))}
-            </div>
-            {numericEstimates.length > 0 && (
-              <GraphToggle
-                data={estimatesBarData}
-                title="All parameter estimates at a glance"
-              />
-            )}
+              )}
+            </>
           ) : (
             <div className="py-10 text-center text-sm text-muted-foreground">
               No parameter estimates yet. Click &quot;Run Parameter Estimation&quot;
