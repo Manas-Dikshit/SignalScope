@@ -423,7 +423,7 @@ export default function AnalysisWorkspacePage() {
             <div className="rounded-lg border bg-card/50 p-4">
               <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Center Frequency</div>
               <div className="mt-1 font-mono text-lg font-semibold">
-                {meta?.center_frequency ? formatFrequency(meta.center_frequency) : "unknown"}
+                {meta?.center_frequency != null ? formatFrequency(meta.center_frequency) : "unknown"}
               </div>
             </div>
             <div className="rounded-lg border bg-card/50 p-4">
