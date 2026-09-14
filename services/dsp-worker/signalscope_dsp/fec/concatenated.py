@@ -83,7 +83,7 @@ def concatenated_decode(bits: np.ndarray, rs_m: int = 4, rs_n: int = 15, rs_k: i
         viterbi=viterbi,
         reed_solomon=rs,
         stage_failed=stage_failed,
-        crc_valid_count=count_crc_valid_frames(np.packbits(decoded) if len(decoded) else b""),
+        crc_valid_count=count_crc_valid_frames(np.packbits(decoded).tobytes()),
         confidence=confidence,
         warnings=warnings,
     )
