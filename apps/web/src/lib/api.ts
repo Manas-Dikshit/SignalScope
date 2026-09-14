@@ -124,8 +124,10 @@ export const projectsApi = {
   parameters: (id: string) =>
     request<ParameterEstimate[]>(`/api/projects/${id}/parameters`),
 
-  analysis: (id: string) =>
-    request<DeepAnalysis>(`/api/projects/${id}/analysis`),
+  analysis: (id: string, fecType?: string) => {
+    const q = fecType ? `?fec_type=${encodeURIComponent(fecType)}` : "";
+    return request<DeepAnalysis>(`/api/projects/${id}/analysis${q}`);
+  },
 
   detectBursts: (id: string) =>
     request<BurstDetection>(`/api/projects/${id}/detect-bursts`, {

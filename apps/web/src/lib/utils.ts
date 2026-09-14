@@ -89,3 +89,48 @@ export function waveformPoints(samples: number[], width = 96, height = 40): stri
     })
     .join(" ");
 }
+
+/* ── Proof payload helpers ─────────────────────────────────────────── */
+
+/**
+ * Any payload a backend estimate can attach as drill-down proof: M-th power
+ * spectra, symbol-clock spectra, run-length histograms, or free-form dicts.
+ */
+export type ProofPayload = Record<string, unknown>;
+
+/** Flatten a proof payload's spectrum sections into a readable summary line. */
+export function summarizeEstimate(payload: ProofPayload | null | undefined): string {
+  if (!payload || typeof payload !== "object") return "";
+  const lines: string[] = [];
+  const evidence = Array.isArray(payload.evidence) ? (payload.evidence as unknown[]) : [];
+  for (const e of evidence) {
+    if (typeof e === "string") lines.push(e);
+  }
+  for (const [key, value] of Object.entries(payload)) {
+    if (key === "evidence" || key === "warnings" || key === "alternatives") continue;
+    if (value && typeof value === "object" && "peakiness" in (value as object)) {
+      const p = value as { peakiness: number };
+      lines.push(
+        `${key.replaceAll("_", " ")} spectrum peak sharpness ${(p.peakiness * 100).toFixed(1)}%`
+      );
+    } else if (typeof value === "number") {
+      lines.push(`${key.replaceAll("_", " ")}: ${value}`);
+    } else if (typeof value === "string") {
+      lines.push(`${key.replaceAll("_", " ")}: ${value}`);
+    }
+  }
+  return lines.join(". ") ? `${lines.join(". ")}.` : "";
+}
+
+/** Trigger a client-side download of a payload as JSON — used by ProofPanel. */
+export function downloadJSON(payload: ProofPayload, filename: string): void {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

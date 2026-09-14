@@ -91,17 +91,51 @@ export interface Job {
   error_message: string | null;
 }
 
+export interface SpectrumProof {
+  freqs: number[];
+  power: number[];
+  peakiness: number;
+}
+
+export interface SymbolRateCandidate {
+  value: number | null;
+  unit: string | null;
+  source: Source;
+  confidence: number | null;
+  evidence: string[];
+}
+
+export interface DeinterleaveCandidate {
+  algorithm: string;
+  params: Record<string, number>;
+  validation_score: number;
+  run_length_histogram: { run_lengths: number[]; counts: number[]; max_run: number };
+  recovered_preview: string;
+}
+
 export interface DeepAnalysis {
   sample_rate: number | null;
   window_start_sample: number;
   window_end_sample: number;
   psd: { freqs_hz: number[]; psd_db: number[] };
   waterfall: { freqs_hz: number[]; times_s: number[]; db: number[][] };
-  features: Record<string, { value: number | string | null; unit: string | null; source: Source; confidence: number | null }>;
-  modulation: { label: string; confidence: number | null; evidence: string[]; alternatives: { label: string; confidence: number | null }[] };
+  features: Record<string, { value: number | string | null; unit: string | null; source: Source; confidence: number | null; evidence: string[]; warnings: string[] }>;
+  modulation: {
+    label: string;
+    confidence: number | null;
+    evidence: string[];
+    alternatives: { label: string; confidence: number | null }[];
+    warnings: string[];
+    proof: Record<string, SpectrumProof>;
+  };
   symbol_rate_hz: number | null;
   symbol_rate_confidence: number | null;
-  deinterleave: { best_attempt: string; validation_score: number; recovered_preview: string };
+  symbol_rate_candidates: SymbolRateCandidate[];
+  deinterleave: {
+    best_attempt: string;
+    validation_score: number;
+    candidates: DeinterleaveCandidate[];
+  };
   demodulation: {
     modulation: string;
     samples_per_symbol: number;
@@ -114,8 +148,13 @@ export interface DeepAnalysis {
     warnings: string[];
   };
   fec: {
+    fec_type: string;
     decoded_bits_count: number;
-    path_metric: number;
+    path_metric: number | null;
+    corrected_symbols: number;
+    corrected_erasures: number;
+    stage_failed: string | null;
+    confidence: number | null;
     crc_valid: boolean | null;
     crc_detail: string;
     first_bytes_hex: string;
