@@ -43,8 +43,11 @@ def estimate_parameters_task(self, project_id_str: str):
     from .models import Base, AnalysisProject, Recording, RecordingMetadata, ParameterEstimate
     from .database import engine as _unused  # noqa: F811
 
-    # Sync engine for Celery worker
-    sync_url = settings.DATABASE_URL.replace("+asyncpg", "")
+    # Sync engine for Celery worker. Strip async drivers so prod (asyncpg) and
+    # tests (aiosqlite) both fall back to their sync equivalents.
+    sync_url = settings.DATABASE_URL
+    for marker in ("+asyncpg", "+aiosqlite"):
+        sync_url = sync_url.replace(marker, "")
     sync_engine = create_engine(sync_url)
     SessionLocal = sessionmaker(bind=sync_engine)
 
