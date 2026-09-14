@@ -355,7 +355,8 @@ async def deep_analysis(
 
     feats = extract_spectral_features(work, sr)
     features = {
-        f.name: {"value": f.value, "unit": f.unit, "source": f.source.value, "confidence": f.confidence}
+        f.name: {"value": f.value, "unit": f.unit, "source": f.source.value, "confidence": f.confidence,
+                 "evidence": f.evidence, "warnings": f.warnings}
         for name, f in [
             ("occupied_bandwidth", feats.occupied_bandwidth_hz),
             ("peak_frequency", feats.peak_frequency_hz),
