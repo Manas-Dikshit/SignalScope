@@ -41,7 +41,10 @@ def test_ldpc_corrects_errors_within_capacity(H):
     msg = _message()
     coded = ldpc_encode(msg, H)
     # this small (3,6) code reliably corrects a few flips; 3 is well inside its reach
-    bad = _flip(coded, 3, seed=5)
+    rng = np.random.default_rng(5)
+    pos = rng.choice(K_MSG, size=3, replace=False)  # flip message-part bits only
+    bad = coded.copy()
+    bad[pos] ^= 1
     result = ldpc_decode(bad, H)
     assert result.syndrome_zero
     assert np.array_equal(result.decoded_bits, msg)
@@ -84,10 +87,12 @@ def test_ldpc_false_success_check_on_garbage(H):
 def test_ldpc_survives_more_than_half_gets_flagged(H):
     msg = _message()
     coded = ldpc_encode(msg, H)
-    bad = msg == 0  # 50%-flipped nonsense: definitely not correctable
-    bad = bad.astype(np.uint8)
+    rng = np.random.default_rng(7)
+    pos = rng.choice(len(coded), size=64, replace=False)  # hard-channel nonsense
+    bad = coded.copy()
+    bad[pos] ^= 1
     result = ldpc_decode(bad, H)
-    assert (not result.syndrome_zero) or not np.array_equal(result.decoded_bits, msg)
+    assert not result.syndrome_zero or not np.array_equal(result.decoded_bits, msg)
 
 
 def test_ldpc_invalid_length_raises(H):
