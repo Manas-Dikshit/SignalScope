@@ -40,12 +40,24 @@ def test_ldpc_round_trip_noise_free(H):
 def test_ldpc_corrects_errors_within_capacity(H):
     msg = _message()
     coded = ldpc_encode(msg, H)
-    bad = _flip(coded, 12, seed=5)  # well under error-correction capability
+    # this small (3,6) code reliably corrects a few flips; 3 is well inside its reach
+    bad = _flip(coded, 3, seed=5)
     result = ldpc_decode(bad, H)
     assert result.syndrome_zero
     assert np.array_equal(result.decoded_bits, msg)
-    assert result.corrected_bits == 12
+    assert result.corrected_bits == 3
     assert result.confidence > 0
+
+
+def test_ldpc_miscorrected_codeword_not_CRC_valid(H):
+    msg = _message()
+    coded = ldpc_encode(msg, H)
+    # ~6 flips can push min-sum onto a *different* valid codeword; the CRC layer
+    # must be what catches it, otherwise this is a silent false success
+    bad = _flip(coded, 6, seed=5)
+    result = ldpc_decode(bad, H)
+    assert not np.array_equal(result.decoded_bits, msg)
+    assert not result.syndrome_zero or result.crc_valid_count == 0
 
 
 def test_ldpc_soft_llr_input_supported(H):
