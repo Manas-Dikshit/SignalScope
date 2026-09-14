@@ -127,9 +127,9 @@ See [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md) for a full walkthrough.
 
 | Suite | Command | Scope |
 |-------|---------|-------|
-| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | 20 tests — loading, mod/demod BER, FEC, modulation classification, symbol rates |
-| API | `cd services/api && python -m pytest tests/ -q` | 27 tests — auth, upload, projects, jobs, isolation, rate limiting |
-| Frontend | `cd apps/web && npm test` | Vitest + RTL — provenance badge, file-format inference |
+| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | 55 tests — loading, modulation/demodulation BER, FEC (convolutional, Reed–Solomon, LDPC, concatenated), de-interleaving (incl. diagonal + pseudo-random), proof spectra, kHz–GHz band coverage |
+| API | `cd services/api && python -m pytest tests/ -q` | 32 tests — auth, upload, projects, jobs, isolation, evidence-proof payloads, FEC-type dispatch |
+| Frontend | `cd apps/web && npm test` | Vitest + RTL — provenance badge, file-format inference, proof summarization, frequency formatting |
 
 Together they verify: WAV/raw-IQ/SigMF loading, convolutional-encode/Viterbi-decode round trips, CRC, de-interleaving, bit correlation, `generate + demodulate` BER for BPSK/QPSK/16-QAM/2-FSK, modulation classification, symbol-rate estimation — plus full API behavior and cross-user data isolation.
 
@@ -188,7 +188,7 @@ Full interactive docs at `/docs` (Swagger UI).
 - ❌ No geolocation / direction finding
 - ❌ No decryption of protected communications — **authorized recordings only**
 - ⚠️ Demodulators sample symbol centers directly — no closed-loop Costas/PLL or Gardner/M&M timing recovery yet
-- ⚠️ FEC is rate-1/2 convolutional/Viterbi (hard-decision) only; LDPC/Reed-Solomon/soft-decision are future work
+- ⚠️ FEC: rate-1/2 convolutional/Viterbi (hard-decision) is the default; Reed–Solomon, LDPC, and RS+convolutional concatenated codes are selectable in deep analysis. Soft-decision LLR decoding is future work
 - ⚠️ API tests run against SQLite for speed (Postgres path exercised by Docker deployment)
 
 ---
@@ -198,7 +198,7 @@ Full interactive docs at `/docs` (Swagger UI).
 - [ ] Hardened multi-user deployment (key rotation, external object storage)
 - [ ] GNU Radio integration
 - [ ] Neural-network modulation classifier
-- [ ] LDPC / Reed-Solomon / soft-decision LLR decoding
+- [ ] Soft-decision LLR decoding (LDPC / Reed–Solomon already shipped — see `docs/REQUIREMENTS_TRACEABILITY.md`)
 - [ ] Closed-loop carrier & timing recovery (Costas / PLL / Gardner)
 
 ---

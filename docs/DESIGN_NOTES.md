@@ -44,3 +44,14 @@ procedural (SVG/CSS) or real product data.
 - Glass + blur used on hero/CTA panels only; content cards stay flat-opaque
   for readability.
 - All decorative SVG layers are `aria-hidden`; contrast unchanged for text.
+
+## Cross-format ML training — deferred deliberately (Phase 6)
+
+Joint IQ + WAV neural-classifier training is intentionally not built. Reasons:
+(i) the required labelled dataset does not exist in-repo and the system is
+offline-only, so a synthetic training set would need writing before any model
+could be validated; (ii) the DSP/provenance layer was designed (per
+`ARCHITECTURE.md`) so a neural classifier plugs in beside the existing
+`classify_modulation_estimate` — nothing here precludes it. Deferring keeps
+the MVP honest about what is measured vs. hypothesised rather than shipping a
+model with no trustworthy training data.
