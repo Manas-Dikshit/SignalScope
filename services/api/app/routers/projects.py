@@ -268,14 +268,15 @@ async def detect_bursts(
 @router.get("/{project_id}/analysis", response_model=DeepAnalysisResponse)
 async def deep_analysis(
     project_id: uuid.UUID,
+    fec_type: str = Query("convolutional"),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Interactive deep-dive over the project ROI: PSD, waterfall, spectral features,
-    modulation hypothesis, symbol-rate candidates, demodulated bits, de-interleaving,
-    FEC decode with CRC, and bit-stream correlation. Runs synchronously over a capped
-    window (first ~0.2 M samples of the ROI) so it stays responsive; the full file is
-    covered by the Celery parameter-estimation job instead."""
+    modulation hypothesis (with M-th power proof spectra), symbol-rate candidates,
+    demodulated bits, de-interleaving (block/convolutional/diagonal/pseudo-random with
+    run-length-histogram proof), selectable FEC decode, and bit-stream correlation.
+    Runs synchronously over a capped window (first ~0.2 M samples of the ROI)."""
     result = await db.execute(
         select(AnalysisProject).where(
             AnalysisProject.id == project_id, AnalysisProject.status != "deleted"
@@ -299,9 +300,17 @@ async def deep_analysis(
     from signalscope_dsp.preprocessing import ConditioningConfig, condition_signal
     from signalscope_dsp.features import compute_psd, compute_waterfall, extract_spectral_features
     from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
+    from signalscope_dsp.modulation.classifier import mth_power_spectrum
     from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
-    from signalscope_dsp.interleaving.block import block_deinterleave, convolutional_deinterleave, score_deinterleave_candidate
+    from signalscope_dsp.interleaving import (
+        block_deinterleave, convolutional_deinterleave, diagonal_deinterleave,
+        score_deinterleave_candidate, run_length_histogram,
+        pseudo_random_deinterleave,
+    )
     from signalscope_dsp.fec.convolutional import viterbi_decode
+    from signalscope_dsp.fec.reed_solomon import reed_solomon_decode
+    from signalscope_dsp.fec.ldpc import build_regular_ldpc, ldpc_decode
+    from signalscope_dsp.fec.concatenated import concatenated_decode
     from signalscope_dsp.fec.validation import bits_to_bytes, crc16_ccitt
     from signalscope_dsp.correlation.correlate import find_repeated_sequences
 
