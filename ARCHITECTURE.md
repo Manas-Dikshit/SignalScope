@@ -24,94 +24,64 @@
 
 ## 🗺️ System Overview
 
-**Six layers, one goal: turn raw RF recordings into *explainable* parameter estimates.** The request path is fully async — the browser fires an analysis job, Celery executes the DSP pipeline in the background, and the frontend polls the job status until results land in Postgres.
+**Five layers, one goal: turn raw RF recordings into *explainable* parameter estimates.** The request path is fully async — the browser fires an analysis job, Celery executes the DSP pipeline in the background, and the frontend polls the job status until results land in Postgres.
 
 ---
 
 ## 📐 System Design Diagram
 
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'background': '#ffffff',
+    'primaryColor': '#0f172a',
+    'primaryTextColor': '#e2e8f0',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#64748b',
+    'secondaryColor': '#1e293b',
+    'tertiaryColor': '#0f172a',
+    'fontFamily': 'Inter, ui-sans-serif, system-ui, sans-serif',
+    'fontSize': '14px'
+  },
+  'flowchart': { 'curve': 'basis', 'nodeSpacing': 45, 'rankSpacing': 55, 'padding': 10 }
+}}%%
 flowchart TB
-    subgraph CLIENTS["👤 Client Layer"]
-        U["🖥️ Operator / Analyst Browser"]
+    subgraph CLIENT["👤 Client"]
+        U["👩‍💻 Analyst<br/><span style='opacity:.75;font-size:12px'>browser session</span>"]
     end
 
-    subgraph FRONTEND["🌐 Presentation Layer — Next.js 14 (Docker :3000)"]
+    subgraph FRONTEND["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/nextdotjs/e2e8f0' height='15'/> &nbsp;<b>Frontend</b> · Next.js 14"]
         direction LR
-        NEXT["⚛️ Next.js App Router<br/>React 18 · TypeScript 5 · TailwindCSS · shadcn/ui"]
-        QUERY["🔗 TanStack Query 5<br/>server-state cache & polling"]
-        PLOTLY["📊 Plotly.js<br/>waveform · IQ scatter · waterfall · spectrum"]
-        UI["🧩 Provenance UI<br/>confidence tiers + expandable evidence"]
+        N["React / TypeScript · Tailwind<br/><span style='opacity:.75;font-size:12px'>upload · workspace · 2 s job polling</span>"]
     end
 
-    subgraph API["📡 Application Layer — FastAPI (Docker :8000)"]
-        direction TB
-        ROUTERS["🗂️ Routers<br/>auth · uploads · projects · recordings<br/>jobs · dashboard"]
-        AUTH["🔐 JWT auth (httpOnly cookie)<br/>python-jose + passlib/argon2"]
-        RATE["⏱️ Rate limiting<br/>login 10/min · upload 30/min"]
-        VALID["🧾 Upload validation<br/>WAV · raw-IQ · SigMF · 200MB cap"]
-        SCH["📝 Pydantic v2 schemas"]
-    end
-
-    subgraph WORKER["⚙️ Compute Layer — Celery Worker (Docker)"]
+    subgraph API["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/fastapi/4f94ef' height='15'/> &nbsp;<b>API</b> · FastAPI"]
         direction LR
-        CELERY["🐝 Celery 5.5 worker<br/>redis broker"]
-        DSP["🔬 signalscope_dsp<br/>(pip install -e — shared with API)"]
+        A["REST /api/* · JWT auth<br/><span style='opacity:.75;font-size:12px'>uploads · projects · job dispatch</span>"]
     end
 
-    subgraph DATA["💾 Data Layer"]
-        subgraph PG["PostgreSQL 16 (Docker :5432)"]
-            MODELS["🏛️ SQLAlchemy 2.0 async models<br/>users · projects · recordings<br/>parameter_estimates · jobs"]
-        end
-        subgraph RD["Redis 7 (Docker :6379)"]
-            B1["db 0 — cached/rate-limit state"]
-            B2["db 1 — Celery broker"]
-            B3["db 2 — Celery result backend"]
-        end
-        VOL["📦 uploads_data volume<br/>raw recordings on disk"]
-    end
-
-    subgraph PIPELINE["🧠 DSP Pipeline (inside signalscope_dsp)"]
+    subgraph WORKER["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/celery/e2e8f0' height='15'/> &nbsp;<b>Compute</b> · Celery worker"]
         direction TB
-        LOAD["📂 Signal loader<br/>WAV · raw-IQ · SigMF · synthetic gen"]
-        ROI["✂️ ROI crop"]
-        PSD["📈 Spectral analysis<br/>PSD · waterfall · spectral features"]
-        BURST["⚡ Burst detection + stats"]
-        MOD["📶 Modulation classification<br/>BPSK · QPSK · 16-QAM · 2-FSK"]
-        SYM["🏷️ Symbol-rate estimation<br/>(multi-candidate + evidence)"]
-        DEMOD["🔉 Demodulation"]
-        DEINT["🔀 De-interleaving"]
-        FEC["🛡️ FEC — rate-1/2<br/>convolutional + Viterbi"]
-        BITS["🧬 Bit correlation"]
-        PROV["✅ Provenance assembly<br/>source · confidence · evidence · warnings"]
+        C["signalscope_dsp<br/><span style='opacity:.75;font-size:12px'>load → spectrum → burst → modulation →<br/>symbol-rate → demod → FEC → evidence</span>"]
     end
 
-    U -->|HTTPS :3000| NEXT
-    NEXT --> PLOTLY
-    NEXT --> UI
-    NEXT --> QUERY
-    QUERY -->|"GET /api/... {JWT cookie}"| ROUTERS
-    ROUTERS --> AUTH
-    ROUTERS --> RATE
-    ROUTERS --> VALID
-    ROUTERS --> SCH
-    ROUTERS -->|"POST estimate-parameters → job_id (202)"| SCH
-    SCH -->|"job.delay() → enqueue"| B2
-    B2 -->|"consume task"| CELERY
-    CELERY --> DSP
-    DSP --> LOAD --> ROI --> PSD & BURST
-    PSD --> MOD
-    BURST --> MOD
-    MOD --> SYM
-    MOD & SYM --> DEMOD --> DEINT --> FEC --> BITS
-    BITS --> PROV
-    CELERY -->|"SQLAlchemy upsert"| MODELS
-    ROUTERS -->|"health / dashboards / list"| MODELS
-    ROUTERS -->|"read/write files"| VOL
-    ROUTERS -->|"rate limit + job lookup"| B1
-    DSP -->|"reads recording file"| VOL
-    ROUTERS -->|"job status {PENDING→SUCCESS}"| B3
-    QUERY -->|"polls GET /api/jobs/{id} every 2s"| ROUTERS
+    subgraph DATA["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/postgresql/dc7a3a' height='15'/> &nbsp;<b>Data</b>"]
+        direction LR
+        P["PostgreSQL<br/><span style='opacity:.75;font-size:12px'>projects · estimates · jobs</span>"]
+        R["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/redis/e2e8f0' height='14'/> Redis<br/><span style='opacity:.75;font-size:12px'>job queue + status</span>"]
+        V["📦 Volume<br/><span style='opacity:.75;font-size:12px'>raw RF files on disk</span>"]
+    end
+
+    U -->|"① upload a recording"| N
+    N -->|"② POST /estimate-parameters"| A
+    A -->|"③ job.delay(project_id)"| R
+    A -.->|"202 · { job_id }"| N
+    R -->|"④ consume task"| C
+    C -->|"⑤ read RF file"| V
+    C -->|"⑤ upsert estimates"| P
+    C -.->|"mark SUCCESS"| R
+    N -->|"⑥ poll /jobs/{id} → estimates + evidence"| A
 ```
 
 ---
