@@ -29,6 +29,7 @@ from ..schemas import (
     ProjectUpdate,
     SegmentInfo,
     SymbolRateCandidate,
+    AnalysisDeinterleave,
 )
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
