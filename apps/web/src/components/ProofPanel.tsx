@@ -177,12 +177,10 @@ export function ProofPanel({
   );
 }
 
-type ProofSection = {
-  label: string;
-  kind: "spectrum" | "histogram" | "text";
-  x?: number[] | string[];
-  y?: number[] | string[] | unknown[];
-};
+type ProofSection =
+  | { label: string; kind: "spectrum"; y: number[] }
+  | { label: string; kind: "histogram"; x: number[]; y: number[] }
+  | { label: string; kind: "text"; text: string };
 
 function buildSections(payload: ProofPayload): ProofSection[] {
   const sections: ProofSection[] = [];
@@ -190,34 +188,30 @@ function buildSections(payload: ProofPayload): ProofSection[] {
   if (Array.isArray(evidence) && evidence.length > 0) {
     (evidence as unknown[])
       .filter((e) => typeof e === "string")
-      .forEach((e) => sections.push({ label: "Evidence", kind: "text", y: [e] as string[] }));
+      .forEach((e) => sections.push({ label: "Evidence", kind: "text", text: e as string }));
   }
   for (const [key, value] of Object.entries(payload)) {
     if (key === "evidence" || key === "warnings" || key === "alternatives") continue;
     if (value && typeof value === "object" && !Array.isArray(value)) {
       const o = value as Record<string, unknown>;
-      if (Array.isArray(o.power) && o.power.length > 0) {
+      if (Array.isArray(o.power) && (o.power as number[]).length > 0) {
         sections.push({
           label: key.replaceAll("_", " "),
           kind: "spectrum",
           y: o.power as number[],
         });
-      } else if (
-        Array.isArray(o.run_lengths) &&
-        Array.isArray(o.counts) &&
-        (o.counts as unknown[]).length > 0
-      ) {
+      } else if (Array.isArray(o.run_lengths) && Array.isArray(o.counts) && (o.counts as unknown[]).length > 0) {
         sections.push({
           label: `${key.replaceAll("_", " ")} (run-length histogram)`,
           kind: "histogram",
           x: o.run_lengths as number[],
           y: o.counts as number[],
         });
-      } else if (value && typeof value === "object") {
+      } else {
         sections.push({
           label: key.replaceAll("_", " "),
           kind: "text",
-          y: [JSON.stringify(value)],
+          text: JSON.stringify(value),
         });
       }
     }
@@ -225,11 +219,10 @@ function buildSections(payload: ProofPayload): ProofSection[] {
   return sections;
 }
 
-function maxOf(arr: number[] | string[] | unknown[]): number {
+function maxOf(arr: number[]): number {
   let m = 1;
   for (const v of arr) {
-    const n = Number(v);
-    if (Number.isFinite(n) && n > m) m = n;
+    if (Number.isFinite(v) && v > m) m = v;
   }
   return m;
 }
