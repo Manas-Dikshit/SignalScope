@@ -4,6 +4,8 @@ import * as React from "react";
 import { cn, downloadJSON, type ProofPayload } from "@/lib/utils";
 import { Eye, X, Download, FileJson2, AlertTriangle } from "lucide-react";
 
+export type { ProofPayload };
+
 /**
  * "View proof" drill-down behind a confidence-bearing estimate.
  *

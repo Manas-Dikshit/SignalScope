@@ -4,6 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { confidenceTier, PALETTE } from "@/lib/tokens";
 import type { Source } from "@/lib/types";
+import { ProofPanel, type ProofPayload } from "@/components/ProofPanel";
 
 /* ──────────────────────────────────────────────────────────────────────
  * ConfidenceIndicator
