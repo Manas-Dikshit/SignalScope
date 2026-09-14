@@ -12,6 +12,7 @@ import { PlotlyChart, CHART_WATERFALL_COLORSCALE } from "@/components/PlotlyChar
 import { GraphToggle } from "@/components/GraphToggle";
 import { ProvenanceBadge } from "@/components/ProvenanceBadge";
 import { MetricCard } from "@/components/ConfidenceIndicator";
+import { ProofPanel } from "@/components/ProofPanel";
 import { RankedBars } from "@/components/RankedBar";
 import { SectionTabs } from "@/components/SectionTabs";
 import { BurstTimeline } from "@/components/BurstTimeline";
@@ -651,6 +652,13 @@ export default function AnalysisWorkspacePage() {
                         </span>
                       </div>
                       <RankedBars items={modHypotheses} />
+                      {modulationProof && (
+                        <ProofPanel
+                          title="Modulation hypothesis proof"
+                          payload={modulationProof}
+                          warnings={analysis.modulation.warnings}
+                        />
+                      )}
                     </div>
                     <div className="grid grid-cols-1 gap-3">
                       <MetricCard
@@ -660,6 +668,7 @@ export default function AnalysisWorkspacePage() {
                         source="estimated"
                         confidence={analysis.symbol_rate_confidence}
                         accent="secondary"
+                        evidence={analysis.symbol_rate_candidates?.[0]?.evidence}
                       />
                     </div>
                   </div>
@@ -713,11 +722,53 @@ export default function AnalysisWorkspacePage() {
 
               {analysisTab === "fec" && (
                 <div className="space-y-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      FEC Codec:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {FEC_TYPES.map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setFecType(t)}
+                          className={cn(
+                            "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                            fecType === t
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                        >
+                          {t}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <MetricCard label="De-interleave" value={analysis.deinterleave.best_attempt} accent="primary" />
-                    <MetricCard label="Validation Score" value={analysis.deinterleave.validation_score.toFixed(3)} accent="secondary" />
-                    <MetricCard label="Decoded Bits" value={analysis.fec.decoded_bits_count.toLocaleString()} accent="primary" />
-                    <MetricCard label="Path Metric" value={analysis.fec.path_metric.toFixed(1)} accent="secondary" />
+                    <MetricCard label="FEC Type" value={analysis.fec.fec_type} accent="primary" />
+                    <MetricCard
+                      label="De-interleave"
+                      value={analysis.deinterleave.best_attempt}
+                      accent="secondary"
+                    />
+                    <MetricCard
+                      label="Decoded Bits"
+                      value={analysis.fec.decoded_bits_count.toLocaleString()}
+                      accent="primary"
+                    />
+                    <MetricCard
+                      label="Decode Confidence"
+                      value={
+                        analysis.fec.confidence === null
+                          ? null
+                          : `${(analysis.fec.confidence * 100).toFixed(0)}%`
+                      }
+                      source="estimated"
+                      confidence={
+                        analysis.fec.confidence === null ? null : analysis.fec.confidence
+                      }
+                      accent="secondary"
+                    />
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
@@ -740,19 +791,59 @@ export default function AnalysisWorkspacePage() {
                           ? "OK"
                           : "mismatch"}
                     </span>
+                    {analysis.fec.stage_failed && (
+                      <span className="rounded-full bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning">
+                        failed at: {analysis.fec.stage_failed}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border bg-card p-4 space-y-3">
+                    <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                      De-interleaver candidates (ranked)
+                    </div>
+                    <RankedBars
+                      items={analysis.deinterleave.candidates.map((c) => ({
+                        label: c.algorithm,
+                        confidence: c.validation_score,
+                        evidence: [
+                          `run-length histogram max run: ${c.run_length_histogram.max_run}`,
+                          `params: ${Object.entries(c.params).map(([k, v]) => `${k}=${v}`).join(", ") || "none"}`,
+                        ],
+                      }))}
+                    />
+                    {analysis.deinterleave.candidates.map((c) => (
+                      <ProofPanel
+                        key={`${c.algorithm}-${JSON.stringify(c.params)}`}
+                        title={`${c.algorithm} de-interleave proof`}
+                        payload={{
+                          run_length_histogram: c.run_length_histogram,
+                          recovered_preview: c.recovered_preview,
+                        }}
+                      />
+                    ))}
                   </div>
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <MonoPanel title="Recovered bit stream (de-interleaved, first 64)">
-                      {analysis.deinterleave.recovered_preview || "—"}
+                      {analysis.deinterleave.candidates[0]?.recovered_preview || "—"}
                     </MonoPanel>
                     <MonoPanel title="FEC-decoded bytes (first 32)">
                       {analysis.fec.first_bytes_hex || "—"}
                     </MonoPanel>
                   </div>
 
-                  <div className="text-xs text-muted-foreground">{analysis.fec.crc_detail}</div>
-                  <WarningList warnings={analysis.fec.warnings} />
+                  <ProofPanel
+                    title="FEC decode proof"
+                    payload={{
+                      fec_type: analysis.fec.fec_type,
+                      corrected_symbols: analysis.fec.corrected_symbols,
+                      corrected_erasures: analysis.fec.corrected_erasures,
+                      crc: analysis.fec.crc_detail,
+                      stage_failed: analysis.fec.stage_failed ?? "none",
+                    }}
+                    warnings={analysis.fec.warnings}
+                  />
                 </div>
               )}
 
