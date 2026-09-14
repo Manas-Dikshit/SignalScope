@@ -1015,6 +1015,8 @@ function BurstPanel({
               accent="primary"
               rangeMin={key === "duty_cycle" ? 0 : undefined}
               rangeMax={key === "duty_cycle" ? 1 : undefined}
+              evidence={s.evidence}
+              warnings={s.warnings}
             />
           ))}
         </div>

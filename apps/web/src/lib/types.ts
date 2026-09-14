@@ -183,7 +183,16 @@ export interface Burst {
 
 export interface BurstDetection {
   bursts: Burst[];
-  stats: Record<string, { name: string; value: number | string | null; unit: string | null; source: string; confidence: number | null }>;
+  stats: Record<string, {
+    name: string;
+    value: number | string | null;
+    unit: string | null;
+    source: string;
+    confidence: number | null;
+    evidence?: string[];
+    warnings?: string[];
+    alternatives?: { value: number | string | null; unit?: string | null; evidence: string[] }[];
+  }>;
 }
 
 export interface User {
