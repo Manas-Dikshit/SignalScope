@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+import warnings
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 import numpy as np
@@ -27,6 +28,7 @@ from ..schemas import (
     ProjectResponse,
     ProjectUpdate,
     SegmentInfo,
+    SymbolRateCandidate,
 )
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -420,29 +422,31 @@ async def deep_analysis(
     best_bits: np.ndarray | None = None
     if hard_bits is not None and len(hard_bits) >= 8:
         candidates = []
-        for algo, params, fn in [
-            ("none", {}, None),
-            ("block", {"rows": 8, "cols": 8}, lambda b: block_deinterleave(b, 8, 8)),
-            ("convolutional", {"n_branches": 4, "delay_step": 3}, lambda b: convolutional_deinterleave(b, 4, 3)),
-            ("diagonal", {"rows": 8, "cols": 8, "offset": 1}, lambda b: diagonal_deinterleave(b, 8, 8, 1)),
-            ("pseudo_random", {"seed": 7}, lambda b: pseudo_random_deinterleave(b, 7)),
-            ("pseudo_random", {"seed": 42}, lambda b: pseudo_random_deinterleave(b, 42)),
-        ]:
-            if fn is None:
-                recovered = hard_bits
-            else:
-                try:
-                    recovered = fn(hard_bits)
-                except Exception:
-                    continue
-            score = score_deinterleave_candidate(recovered)
-            candidates.append({
-                "algorithm": algo,
-                "params": params,
-                "validation_score": round(score, 3),
-                "run_length_histogram": run_length_histogram(recovered),
-                "recovered_preview": "".join(str(b) for b in recovered[:64]),
-            })
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")  # block/diagonal de-interleavers warn on truncation
+            for algo, params, fn in [
+                ("none", {}, None),
+                ("block", {"rows": 8, "cols": 8}, lambda b: block_deinterleave(b, 8, 8)),
+                ("convolutional", {"n_branches": 4, "delay_step": 3}, lambda b: convolutional_deinterleave(b, 4, 3)),
+                ("diagonal", {"rows": 8, "cols": 8, "offset": 1}, lambda b: diagonal_deinterleave(b, 8, 8, 1)),
+                ("pseudo_random", {"seed": 7}, lambda b: pseudo_random_deinterleave(b, 7)),
+                ("pseudo_random", {"seed": 42}, lambda b: pseudo_random_deinterleave(b, 42)),
+            ]:
+                if fn is None:
+                    recovered = hard_bits
+                else:
+                    try:
+                        recovered = fn(hard_bits)
+                    except Exception:
+                        continue
+                score = score_deinterleave_candidate(recovered)
+                candidates.append({
+                    "algorithm": algo,
+                    "params": params,
+                    "validation_score": round(score, 3),
+                    "run_length_histogram": run_length_histogram(recovered),
+                    "recovered_preview": "".join(str(b) for b in recovered[:64]),
+                })
         candidates.sort(key=lambda d: d["validation_score"], reverse=True)
         best = candidates[0]
         deinterleave = {
