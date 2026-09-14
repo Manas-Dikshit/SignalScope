@@ -89,7 +89,7 @@ Traditional signal analyzers output a single number and call it truth. SignalSco
 
 ```bash
 # 1. Clone & configure
-git clone <repo-url> signalscope
+git clone <https://github.com/Manas-Dikshit/SignalScope.git> signalscope
 cd signalscope
 
 cp .env.example .env                        # then set a strong SECRET_KEY
