@@ -547,10 +547,24 @@ async def deep_analysis(
             confidence=mod_est.confidence,
             evidence=mod_est.evidence,
             alternatives=[{"label": alt.value, "confidence": alt.confidence} for alt in mod_est.alternatives],
+            warnings=list(mod_est.warnings),
+            proof=mod_proof,
         ),
         symbol_rate_hz=sym_rate,
         symbol_rate_confidence=sym_conf,
-        deinterleave=deinterleave,
+        symbol_rate_candidates=[
+            SymbolRateCandidate(
+                value=c.value, unit=c.unit, source=c.source.value,
+                confidence=c.confidence, evidence=list(c.evidence),
+            )
+            for c in sym_cands
+        ],
+        deinterleave=AnalysisDeinterleave(
+            best_attempt=deinterleave["best_attempt"],
+            validation_score=deinterleave["validation_score"],
+            candidates=deinterleave["candidates"],
+        ),
+        fec_type=fec_type.lower(),
         demodulation=AnalysisDemod(
             modulation=mod_label or "unknown", samples_per_symbol=sps,
             bits_per_symbol=bits_per_symbol, n_symbols=n_symbols, n_bits=n_bits,
@@ -561,7 +575,13 @@ async def deep_analysis(
         ),
         fec=AnalysisFEC(
             decoded_bits_count=int(len(decoded_bits)) if decoded_bits is not None else 0,
-            path_metric=path_metric, crc_valid=crc_valid, crc_detail=crc_detail,
+            path_metric=path_metric,
+            fec_type=fec_type.lower(),
+            corrected_symbols=corrected_symbols,
+            corrected_erasures=corrected_erasures,
+            stage_failed=fec_stage_failed,
+            confidence=fec_confidence,
+            crc_valid=crc_valid, crc_detail=crc_detail,
             first_bytes_hex=fec_bytes_hex, warnings=fec_warnings,
         ),
         correlation=AnalysisCorrelation(sequences=sequences),
