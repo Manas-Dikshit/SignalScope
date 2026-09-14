@@ -234,13 +234,15 @@ export default function AnalysisWorkspacePage() {
     : [];
 
   const analysisFeatures = analysis
-    ? Object.entries(analysis.features as Record<string, { value: number | string | null; unit?: string | null; source: import("@/lib/types").Source; confidence: number | null }>)
+    ? Object.entries(analysis.features as Record<string, { value: number | string | null; unit?: string | null; source: import("@/lib/types").Source; confidence: number | null; evidence: string[]; warnings: string[] }>)
         .map(([name, f]) => ({
           name,
           meta: FEATURE_RANGES[name],
           value: f.value as number | null,
           source: f.source,
           confidence: f.confidence,
+          evidence: f.evidence,
+          warnings: f.warnings,
         }))
     : [];
 
@@ -629,6 +631,8 @@ export default function AnalysisWorkspacePage() {
                         accent="primary"
                         rangeMin={f.meta?.min}
                         rangeMax={f.meta?.max}
+                        evidence={f.evidence}
+                        warnings={f.warnings}
                       />
                     ))}
                   </div>
