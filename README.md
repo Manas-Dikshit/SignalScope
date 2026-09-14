@@ -1,6 +1,6 @@
 <div align="center">
 
-# 📡 SignalScope AI
+# SignalScope AI
 
 **Explainable RF Signal-Analysis Workbench**
 
@@ -12,7 +12,7 @@ An offline, provenance-tracked, AI-assisted RF signal analysis platform for **au
 
 ---
 
-**🏆 Never guesses. Never hides uncertainty. Every number has a `source`, a `confidence`, and evidence you can read.**
+**Never guesses. Never hides uncertainty. Every number has a `source`, a `confidence`, and evidence you can read.**
 
 </div>
 
@@ -71,13 +71,13 @@ Traditional signal analyzers output a single number and call it truth. SignalSco
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-> **📐 Ready the full system design —** [**`ARCHITECTURE.md`**](./ARCHITECTURE.md) contains the complete Mermaid system-design diagram of every layer (frontend, API, Celery worker, Redis, Postgres), the DSP processing pipeline, and the async job lifecycle sequence. Tech-stack badges included.
+> **Ready the full system design —** [**`ARCHITECTURE.md`**](./ARCHITECTURE.md) contains the complete Mermaid system-design diagram of every layer (frontend, API, Celery worker, Redis, Postgres), the DSP processing pipeline, and the async job lifecycle sequence. Tech-stack badges included.
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
@@ -101,11 +101,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
 | Service | URL |
 |---------|-----|
-| 🌐 Web app | http://localhost:3000 |
-| 🔌 API | http://localhost:8000 |
-| 📚 Swagger docs | http://localhost:8000/docs |
-| 🐘 Postgres | `localhost:5432` |
-| 🧮 Redis | `localhost:6379` |
+| Web app | http://localhost:3000 |
+| API | http://localhost:8000 |
+| Swagger docs | http://localhost:8000/docs |
+| Postgres | `localhost:5432` |
+| Redis | `localhost:6379` |
 
 > The dev overlay (`docker-compose.dev.yml`) merges with the base file — always pass **both**. It enables API/worker hot-reload. For frontend hot-reload, run `npm run dev` in `apps/web` on the host.
 
@@ -123,7 +123,7 @@ See [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md) for a full walkthrough.
 
 ---
 
-## 🧪 Testing
+## Testing
 
 | Suite | Command | Scope |
 |-------|---------|-------|
@@ -135,7 +135,7 @@ Together they verify: WAV/raw-IQ/SigMF loading, convolutional-encode/Viterbi-dec
 
 ---
 
-## 📡 DSP Pipeline & Provenance Model
+## DSP Pipeline & Provenance Model
 
 Every estimate the pipeline produces carries a **provenance record**:
 
@@ -163,7 +163,7 @@ Nothing is presented as *exact* when it isn't — the UI color-codes confidence 
 
 ---
 
-## 🔌 API Overview
+## API Overview
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
@@ -181,19 +181,19 @@ Full interactive docs at `/docs` (Swagger UI).
 
 ---
 
-## ⚠️ Scope & Limitations
+## Scope & Limitations
 
 **Intentionally out of scope (MVP):**
-- ❌ No live RF capture or SDR streaming
-- ❌ No geolocation / direction finding
-- ❌ No decryption of protected communications — **authorized recordings only**
-- ⚠️ Demodulators sample symbol centers directly — no closed-loop Costas/PLL or Gardner/M&M timing recovery yet
-- ⚠️ FEC: rate-1/2 convolutional/Viterbi (hard-decision) is the default; Reed–Solomon, LDPC, and RS+convolutional concatenated codes are selectable in deep analysis. Soft-decision LLR decoding is future work
-- ⚠️ API tests run against SQLite for speed (Postgres path exercised by Docker deployment)
+- No live RF capture or SDR streaming
+- No geolocation / direction finding
+- No decryption of protected communications — **authorized recordings only**
+- Demodulators sample symbol centers directly — no closed-loop Costas/PLL or Gardner/M&M timing recovery yet
+- FEC: rate-1/2 convolutional/Viterbi (hard-decision) is the default; Reed–Solomon, LDPC, and RS+convolutional concatenated codes are selectable in deep analysis. Soft-decision LLR decoding is future work
+- API tests run against SQLite for speed (Postgres path exercised by Docker deployment)
 
 ---
 
-## 🧭 Roadmap
+## Roadmap
 
 - [ ] Hardened multi-user deployment (key rotation, external object storage)
 - [ ] GNU Radio integration
@@ -203,7 +203,7 @@ Full interactive docs at `/docs` (Swagger UI).
 
 ---
 
-## 📄 License
+## License
 
 All usage must be limited to **authorized** spectrum analysis. The author assumes no responsibility for misuse of the DSP capabilities.
 
