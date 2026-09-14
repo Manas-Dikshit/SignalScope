@@ -68,7 +68,7 @@ export function ProofPanel({
               {s.label}
             </div>
           )}
-          {s.kind === "spectrum" && s.y && s.y.length > 0 && (
+          {s.kind === "spectrum" && (
             <svg
               viewBox={`0 0 240 56`}
               className="h-14 w-full"
@@ -88,32 +88,27 @@ export function ProofPanel({
           )}
           {s.kind === "histogram" && (
             <div className="space-y-1">
-              {Array.isArray(s.y) &&
-                s.y.slice(0, 12).map((v, j) => (
-                  <div key={j} className="flex items-center gap-2">
-                    <span className="w-10 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
-                      {(s.x as number[])[j] ?? j + 1}
-                    </span>
-                    <div className="h-2 flex-1 rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-secondary"
-                        style={{ width: `${Math.min(100, (Number(v) / maxOf(s.y)) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="w-8 shrink-0 font-mono text-[10px] text-muted-foreground">
-                      {Number(v)}
-                    </span>
+              {s.y.slice(0, 12).map((v, j) => (
+                <div key={j} className="flex items-center gap-2">
+                  <span className="w-10 shrink-0 text-right font-mono text-[10px] text-muted-foreground">
+                    {s.x[j] ?? j + 1}
+                  </span>
+                  <div className="h-2 flex-1 rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-secondary"
+                      style={{ width: `${Math.min(100, (Number(v) / maxOf(s.y)) * 100)}%` }}
+                    />
                   </div>
-                ))}
+                  <span className="w-8 shrink-0 font-mono text-[10px] text-muted-foreground">
+                    {Number(v)}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
           {s.kind === "text" && (
             <div className="font-mono text-[11px] leading-relaxed text-muted-foreground break-all">
-              {typeof s.y === "string"
-                ? s.y
-                : s.y && Array.isArray(s.y)
-                  ? (s.y as unknown[]).filter((x) => typeof x === "string").join(", ")
-                  : JSON.stringify(s.y)}
+              {s.text}
             </div>
           )}
         </div>
