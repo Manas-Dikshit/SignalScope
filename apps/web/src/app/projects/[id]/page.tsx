@@ -97,8 +97,8 @@ export default function AnalysisWorkspacePage() {
   });
 
   const { data: analysis, isError: analysisError } = useQuery({
-    queryKey: ["analysis", projectId],
-    queryFn: () => projectsApi.analysis(projectId),
+    queryKey: ["analysis", projectId, fecType],
+    queryFn: () => projectsApi.analysis(projectId, fecType),
     enabled: !!projectId,
   });
 
@@ -106,6 +106,8 @@ export default function AnalysisWorkspacePage() {
   const [roiEnd, setRoiEnd] = React.useState(100);
   const [activeTab, setActiveTab] = React.useState("waveform");
   const [analysisTab, setAnalysisTab] = React.useState("spectrum");
+  const [fecType, setFecType] = React.useState("convolutional");
+  const FEC_TYPES = ["convolutional", "reed_solomon", "ldpc", "concatenated"];
 
   const meta = recording?.metadata_entry;
   const totalSamples = recording?.total_samples ?? 0;
@@ -252,6 +254,10 @@ export default function AnalysisWorkspacePage() {
         })),
       ]
     : [];
+
+  const modulationProof = analysis
+    ? { evidence: analysis.modulation.evidence, ...(analysis.modulation.proof ?? {}) }
+    : null;
 
   const isLoading = projectLoading || recordingLoading;
   const jobCompleted = jobData?.status === "completed";

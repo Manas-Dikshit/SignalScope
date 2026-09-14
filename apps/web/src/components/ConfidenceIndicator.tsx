@@ -156,6 +156,9 @@ export function MetricCard({
   sparkline,
   rangeMin,
   rangeMax,
+  evidence,
+  warnings,
+  proof,
   className,
 }: {
   label: string;
@@ -167,6 +170,9 @@ export function MetricCard({
   sparkline?: number[];
   rangeMin?: number;
   rangeMax?: number;
+  evidence?: string[];
+  warnings?: string[];
+  proof?: ProofPayload;
   className?: string;
 }) {
   const accentBorder = {
@@ -175,6 +181,12 @@ export function MetricCard({
     destructive: "border-l-destructive",
     warning: "border-l-warning",
   }[accent ?? "primary"];
+
+  const proofPayload: ProofPayload | null = proof
+    ? proof
+    : evidence && evidence.length > 0
+      ? { evidence }
+      : null;
 
   return (
     <div
@@ -220,6 +232,16 @@ export function MetricCard({
       {rangeMin !== undefined && rangeMax !== undefined && value !== null && typeof value === "number" && (
         <div className="pt-1">
           <RangeBar value={value} min={rangeMin} max={rangeMax} />
+        </div>
+      )}
+
+      {proofPayload && (
+        <div className="pt-1">
+          <ProofPanel
+            title={`${label} proof`}
+            payload={proofPayload}
+            warnings={warnings}
+          />
         </div>
       )}
     </div>
