@@ -372,6 +372,7 @@ async def deep_analysis(
     sym_cands = estimate_symbol_rate_candidates(work, sr)
     sym_rate = next((c.value for c in sym_cands if c.value), None)
     sym_conf = next((c.confidence for c in sym_cands if c.value), None)
+    mod_proof = {f"order_{o}": mth_power_spectrum(work[:65_536], o) for o in (2, 4, 8)}
 
     mod_label = "" if mod_est.value is None else str(mod_est.value)
     sps = max(2, int(round(sr / sym_rate))) if sym_rate else 8
@@ -404,31 +405,115 @@ async def deep_analysis(
     except Exception as exc:
         demod_warnings = [f"Demodulation failed: {exc}"]
 
-    deinterleave = {"best_attempt": "none", "validation_score": 0.0, "recovered_preview": ""}
+    deinterleave: dict = {"best_attempt": "none", "validation_score": 0.0, "recovered_preview": "",
+                          "candidates": []}
     fec_warnings: list[str] = []
     decoded_bits: np.ndarray | None = None
     path_metric = 0.0
     crc_valid: bool | None = None
     crc_detail = "No decoded bytes to check"
     fec_bytes_hex = ""
+    corrected_symbols = 0
+    corrected_erasures = 0
+    fec_stage_failed: str | None = None
+    fec_confidence: float | None = None
+    best_bits: np.ndarray | None = None
     if hard_bits is not None and len(hard_bits) >= 8:
-        raw_score = score_deinterleave_candidate(hard_bits)
-        attrs = [("block", block_deinterleave(hard_bits, 8, 8)), ("convolutional", convolutional_deinterleave(hard_bits, 4, 3))]
-        best_bits, best_name, best_score = hard_bits, "none", raw_score
-        for name, candidate in attrs:
-            score = score_deinterleave_candidate(candidate)
-            if score > best_score:
-                best_bits, best_name, best_score = candidate, name, score
+        candidates = []
+        for algo, params, fn in [
+            ("none", {}, None),
+            ("block", {"rows": 8, "cols": 8}, lambda b: block_deinterleave(b, 8, 8)),
+            ("convolutional", {"n_branches": 4, "delay_step": 3}, lambda b: convolutional_deinterleave(b, 4, 3)),
+            ("diagonal", {"rows": 8, "cols": 8, "offset": 1}, lambda b: diagonal_deinterleave(b, 8, 8, 1)),
+            ("pseudo_random", {"seed": 7}, lambda b: pseudo_random_deinterleave(b, 7)),
+            ("pseudo_random", {"seed": 42}, lambda b: pseudo_random_deinterleave(b, 42)),
+        ]:
+            if fn is None:
+                recovered = hard_bits
+            else:
+                try:
+                    recovered = fn(hard_bits)
+                except Exception:
+                    continue
+            score = score_deinterleave_candidate(recovered)
+            candidates.append({
+                "algorithm": algo,
+                "params": params,
+                "validation_score": round(score, 3),
+                "run_length_histogram": run_length_histogram(recovered),
+                "recovered_preview": "".join(str(b) for b in recovered[:64]),
+            })
+        candidates.sort(key=lambda d: d["validation_score"], reverse=True)
+        best = candidates[0]
         deinterleave = {
-            "best_attempt": best_name,
-            "validation_score": round(best_score, 3),
-            "recovered_preview": "".join(str(b) for b in best_bits[:64]),
+            "best_attempt": best["algorithm"],
+            "validation_score": best["validation_score"],
+            "recovered_preview": best["recovered_preview"],
+            "candidates": candidates,
         }
         try:
-            viterbi = viterbi_decode(best_bits, constraint_length=7)
-            decoded_bits = viterbi.decoded_bits
-            path_metric = float(viterbi.path_metric)
-            fec_warnings = list(viterbi.warnings)
+            best_bits = None
+            if best["algorithm"] == "none":
+                best_bits = hard_bits
+            else:
+                for algo, params, fn in [
+                    ("block", {"rows": 8, "cols": 8}, lambda b: block_deinterleave(b, 8, 8)),
+                    ("convolutional", {"n_branches": 4, "delay_step": 3}, lambda b: convolutional_deinterleave(b, 4, 3)),
+                    ("diagonal", {"rows": 8, "cols": 8, "offset": 1}, lambda b: diagonal_deinterleave(b, 8, 8, 1)),
+                    ("pseudo_random", {"seed": 7}, lambda b: pseudo_random_deinterleave(b, 7)),
+                    ("pseudo_random", {"seed": 42}, lambda b: pseudo_random_deinterleave(b, 42)),
+                ]:
+                    if algo == best["algorithm"] and params == best["params"]:
+                        best_bits = fn(hard_bits)
+                        break
+
+            if best_bits is None:
+                best_bits = hard_bits
+
+            # FEC decode dispatch. Every codec reports honestly whether the frame
+            # converged (syndrome/parity check) instead of silently fabricating data.
+            fec_used = fec_type.lower()
+            if fec_used == "reed_solomon":
+                rs_in = np.zeros(60, dtype=np.uint8)
+                rs_in[: min(len(best_bits), 60)] = best_bits[:60]
+                result = reed_solomon_decode(rs_in, 4, 15, 11)
+                decoded_bits = np.concatenate([result.decoded_bits, best_bits[60:]])
+                path_metric = None
+                corrected_symbols = result.corrected_symbols
+                corrected_erasures = result.corrected_erasures
+                fec_confidence = result.confidence
+                if not result.syndrome_zero:
+                    fec_stage_failed = "reed_solomon"
+                fec_warnings = list(result.warnings)
+            elif fec_used == "ldpc":
+                dim_seed = int(uuid.uuid5(uuid.NAMESPACE_URL, str(project_id)).int % (2 ** 32))
+                H = build_regular_ldpc(128, 64, column_weight=3, seed=dim_seed)
+                ldpc_in = np.zeros(128, dtype=np.uint8)
+                ldpc_in[: min(len(best_bits), 128)] = best_bits[:128]
+                result = ldpc_decode(ldpc_in, H)
+                decoded_bits = np.concatenate([result.decoded_bits, best_bits[128:]])
+                path_metric = None
+                corrected_symbols = result.corrected_bits
+                fec_confidence = result.confidence
+                if not result.syndrome_zero:
+                    fec_stage_failed = "ldpc"
+                fec_warnings = list(result.warnings)
+            elif fec_used == "concatenated":
+                result = concatenated_decode(best_bits, rs_m=4, rs_n=15, rs_k=11)
+                decoded_bits = result.decoded_bits
+                path_metric = result.viterbi.path_metric
+                corrected_symbols = result.reed_solomon.corrected_symbols if result.reed_solomon else 0
+                corrected_erasures = result.reed_solomon.corrected_erasures if result.reed_solomon else 0
+                fec_confidence = result.confidence
+                fec_stage_failed = result.stage_failed
+                fec_warnings = list(result.warnings)
+            else:
+                viterbi = viterbi_decode(best_bits, constraint_length=7)
+                decoded_bits = viterbi.decoded_bits
+                path_metric = float(viterbi.path_metric)
+                fec_warnings = list(viterbi.warnings)
+                fec_confidence = None
+
             payload = bits_to_bytes(decoded_bits)
             fec_bytes_hex = payload[:32].hex()
             if len(payload) >= 2:
