@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .validation import bits_to_bytes, crc16_ccitt
+from .validation import bits_to_bytes, count_crc_valid_frames
 
 
 # Known primitive polynomials for GF(2^m), expressed as the packed coefficient
@@ -203,7 +203,7 @@ def _forney_values(gf: _GF, locator: list[int], syndromes: list[int], n: int,
     e_i = X_i * Omega(X_i^-1) / Lambda'(X_i^-1)   (subtraction == addition here)
     with Omega(x) = (Lambda * S)(x) mod x^(2t).
     """
-    omega = _poly_mod_xn(_poly_mul(gf, locator, syndromes), len(syndromes))
+    omega = [c for c in _poly_mul(gf, locator, syndromes)][: len(syndromes)]
     lp = _derivative(gf, locator)
     values = []
     for pos in positions:
@@ -219,27 +219,6 @@ def _forney_values(gf: _GF, locator: list[int], syndromes: list[int], n: int,
 
 def _syndromes(gf: _GF, symbols: list[int], n_parity: int) -> list[int]:
     return [_poly_eval(gf, list(reversed(symbols)), gf.pow(2, i)) for i in range(n_parity)]
-
-
-def _count_crc_valid(decoded_bytes: bytes) -> int:
-    """How many of the trailing-2-byte CRC16 fields in the decoded message validate.
-
-    The pipeline's framing convention (shared with the convolutional path) is
-    payload || crc16(payload big-endian). Every cleanly decoded RS message whose
-    tail matches an earlier-2-bytes CRC counts as one valid frame.
-    """
-    count = 0
-    buf = decoded_bytes
-    # guard against pathological loops (max 8 CRC frames per decode)
-    for _ in range(8):
-        if len(buf) < 2:
-            break
-        payload, received = buf[:-2], int.from_bytes(buf[-2:], "big")
-        if crc16_ccitt(payload) == received:
-            count += 1
-            break
-        buf = buf[1:]
-    return count
 
 
 @dataclass
@@ -331,7 +310,7 @@ def reed_solomon_decode(bits: np.ndarray, m: int, n: int, k: int,
             syndrome_zero = False
             return ReedSolomonResult(
                 _symbols_to_bits(decoded, m), n * m, k * m, 0, 0,
-                _count_crc_valid(bits_to_bytes(_symbols_to_bits(decoded, m))),
+                count_crc_valid_frames(bits_to_bytes(_symbols_to_bits(decoded, m))),
                 0.0, warnings, syndrome_zero,
             )
 
@@ -399,7 +378,7 @@ def reed_solomon_decode(bits: np.ndarray, m: int, n: int, k: int,
 
     decoded_bits = _symbols_to_bits(decoded, m)[: k * m]
     decoded_bytes = bits_to_bytes(decoded_bits)
-    crc_count = _count_crc_valid(decoded_bytes)
+    crc_count = count_crc_valid_frames(decoded_bytes)
 
     return ReedSolomonResult(
         decoded_bits=decoded_bits,

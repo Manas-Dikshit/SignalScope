@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .validation import bits_to_bytes, crc16_ccitt
+from .validation import bits_to_bytes, count_crc_valid_frames
 
 
 @dataclass
@@ -70,20 +70,6 @@ def ldpc_encode(bits: np.ndarray, parity_check: np.ndarray) -> np.ndarray:
     A = H[:, :k_message]
     parity = (A @ msg) % 2
     return np.concatenate([msg, parity]).astype(np.uint8)
-
-
-def _count_crc_valid(decoded_bytes: bytes) -> int:
-    count = 0
-    buf = decoded_bytes
-    for _ in range(8):
-        if len(buf) < 2:
-            break
-        payload, received = buf[:-2], int.from_bytes(buf[-2:], "big")
-        if crc16_ccitt(payload) == received:
-            count += 1
-            break
-        buf = buf[1:]
-    return count
 
 
 def ldpc_decode(bits: np.ndarray, parity_check: np.ndarray, max_iterations: int = 40,
@@ -165,7 +151,7 @@ def ldpc_decode(bits: np.ndarray, parity_check: np.ndarray, max_iterations: int 
         confidence = 0.0
 
     decoded_bytes = bits_to_bytes(decoded_bits)
-    crc_count = _count_crc_valid(decoded_bytes)
+    crc_count = count_crc_valid_frames(decoded_bytes)
 
     return LDPCResult(
         decoded_bits=decoded_bits,

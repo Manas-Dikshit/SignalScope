@@ -39,3 +39,19 @@ def find_sync_word(bits: np.ndarray, sync_pattern: np.ndarray, max_hamming: int 
         if dist <= max_hamming:
             matches.append({"offset": offset, "hamming_distance": dist})
     return matches
+
+
+def count_crc_valid_frames(decoded_bytes: bytes, max_frames: int = 8) -> int:
+    """Scan up to max_frames byte-aligned trailing (payload || crc16) frames.
+    Returns the number of frames whose embedded CRC-16 matches its payload."""
+    count = 0
+    buf = decoded_bytes
+    for _ in range(max_frames):
+        if len(buf) < 2:
+            break
+        payload, received = buf[:-2], int.from_bytes(buf[-2:], "big")
+        if crc16_ccitt(payload) == received:
+            count += 1
+            break  # one frame validated at this alignment; stop the scan
+        buf = buf[1:]
+    return count
