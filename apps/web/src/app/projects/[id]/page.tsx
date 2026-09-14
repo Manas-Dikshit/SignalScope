@@ -262,6 +262,8 @@ export default function AnalysisWorkspacePage() {
     ? { evidence: analysis.modulation.evidence, ...(analysis.modulation.proof ?? {}) }
     : null;
 
+  const deintCandidates = analysis?.deinterleave.candidates ?? [];
+
   const isLoading = projectLoading || recordingLoading;
   const jobCompleted = jobData?.status === "completed";
   const jobFailed = jobData?.status === "failed";
@@ -803,7 +805,7 @@ export default function AnalysisWorkspacePage() {
                       De-interleaver candidates (ranked)
                     </div>
                     <RankedBars
-                      items={analysis.deinterleave.candidates.map((c) => ({
+                      items={deintCandidates.map((c) => ({
                         label: c.algorithm,
                         confidence: c.validation_score,
                         evidence: [
@@ -812,7 +814,7 @@ export default function AnalysisWorkspacePage() {
                         ],
                       }))}
                     />
-                    {analysis.deinterleave.candidates.map((c) => (
+                    {deintCandidates.map((c) => (
                       <ProofPanel
                         key={`${c.algorithm}-${JSON.stringify(c.params)}`}
                         title={`${c.algorithm} de-interleave proof`}
@@ -826,7 +828,7 @@ export default function AnalysisWorkspacePage() {
 
                   <div className="grid gap-3 md:grid-cols-2">
                     <MonoPanel title="Recovered bit stream (de-interleaved, first 64)">
-                      {analysis.deinterleave.candidates[0]?.recovered_preview || "—"}
+                      {deintCandidates[0]?.recovered_preview || "—"}
                     </MonoPanel>
                     <MonoPanel title="FEC-decoded bytes (first 32)">
                       {analysis.fec.first_bytes_hex || "—"}
