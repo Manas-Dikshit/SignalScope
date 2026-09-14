@@ -102,7 +102,7 @@ def ldpc_decode(bits: np.ndarray, parity_check: np.ndarray, max_iterations: int 
     for v in range(n_vars):
         q[H[:, v] == 0, v] = 0.0  # no message to a variable the check isn't connected to
 
-    decision = llr_input >= 0
+    decision = llr_input < 0
     syndrome = (H @ decision) % 2
     iterations = 0
 
@@ -132,7 +132,7 @@ def ldpc_decode(bits: np.ndarray, parity_check: np.ndarray, max_iterations: int 
             s[v] = total
             for c in var_neighbors[v]:
                 q[c, v] = total - r[c, v]
-        decision = s >= 0
+        decision = s < 0
         syndrome = (H @ decision.astype(np.uint8)) % 2
         if not syndrome.any():
             break
