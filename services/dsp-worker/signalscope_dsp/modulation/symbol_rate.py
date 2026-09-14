@@ -5,6 +5,19 @@ import numpy as np
 from ..common import Estimate, Source
 
 
+def symbol_clock_spectrum(samples: np.ndarray, sample_rate: float) -> dict:
+    """Cyclostationary symbol-clock feature used by the rate estimator, exposed as
+    plot-ready proof data: {"freqs": [...], "power": [...], "peak_freq": ...}.
+    The spectrum of |diff(samples)|^2 carries a line at the symbol rate for both
+    constant- and non-constant-envelope digital modulations."""
+    nonlinear = np.abs(np.diff(samples)) ** 2
+    nonlinear = nonlinear - np.mean(nonlinear)
+    power = np.abs(np.fft.rfft(nonlinear * np.hanning(len(nonlinear)))) ** 2
+    freqs = np.fft.rfftfreq(len(nonlinear), d=1.0 / sample_rate)
+    peak_freq = float(freqs[np.argmax(power)]) if len(freqs) else 0.0
+    return {"freqs": freqs.tolist(), "power": power.tolist(), "peak_freq": peak_freq}
+
+
 def estimate_symbol_rate_candidates(samples: np.ndarray, sample_rate: float, min_rate_hz: float = 50.0,
                                      max_candidates: int = 3) -> list[Estimate]:
     """Cyclostationary-style symbol-rate estimate: the spectrum of |signal|^2 (or the
@@ -18,15 +31,9 @@ def estimate_symbol_rate_candidates(samples: np.ndarray, sample_rate: float, min
         return [Estimate("symbol_rate", None, "Hz", Source.UNKNOWN,
                           warnings=["Recording too short or sample rate unknown."])]
 
-    # |diff(samples)|^2 rather than |samples|^2: constant-envelope modulations
-    # (PSK, FSK) have no amplitude-domain symbol-rate line, but every symbol
-    # transition still produces a sample-to-sample jump, so the *difference*
-    # signal carries a spectral line at the symbol rate for both constant- and
-    # non-constant-envelope signals alike.
-    nonlinear = np.abs(np.diff(samples)) ** 2
-    nonlinear = nonlinear - np.mean(nonlinear)
-    spectrum = np.abs(np.fft.rfft(nonlinear * np.hanning(len(nonlinear))))
-    freqs = np.fft.rfftfreq(len(nonlinear), d=1.0 / sample_rate)
+    spectrum_info = symbol_clock_spectrum(samples, sample_rate)
+    spectrum = np.asarray(spectrum_info["power"])
+    freqs = np.asarray(spectrum_info["freqs"])
 
     min_idx = np.searchsorted(freqs, min_rate_hz)
     max_idx = np.searchsorted(freqs, sample_rate / 2.2)  # stay well under Nyquist/2 as a sane symbol-rate ceiling

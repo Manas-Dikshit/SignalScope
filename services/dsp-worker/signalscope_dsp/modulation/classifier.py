@@ -41,23 +41,29 @@ def _freq_cluster_count(inst_freq: np.ndarray, sample_rate: float, max_clusters:
     return len(merged), merged
 
 
-def _mth_power_peakiness(samples: np.ndarray, m: int) -> float:
-    """Classic M-th power method: raising a PSK signal with order M to the M-th power
-    collapses the M phase states onto a single tone, producing a sharp spectral peak.
-    Returns a 0..1 'peakiness' score (peak power / mean power of the spectrum),
-    calibrated so a pure Hann-windowed tone scores ~0.9 and white noise ~0.0:
-    a pure tone gives peak/mean ≈ 0.665 * N (length-invariant, measured), so the
-    constant 3.5 maps it to 1 - exp(-3.5 * 0.665) ≈ 0.90."""
-    raised = samples ** m
+def mth_power_spectrum(samples: np.ndarray, order: int) -> dict:
+    """Expose the M-th power spectrum used by classify_modulation as plot-ready
+    proof data: {"freqs": [...], "power": [...], "peakiness": 0..1}.
+    Raising a PSK signal of order M to the M-th power collapses its phase states
+    onto a single tone -> sharp peak; the peakiness score is calibrated so a
+    pure Hann-windowed tone scores ~0.9 and white noise ~0.0."""
+    raised = samples ** order
     spectrum = np.abs(np.fft.fft(raised * np.hanning(len(raised))))
     power = spectrum ** 2
+    freqs = np.fft.fftfreq(len(raised))
     peak = np.max(power)
     mean = np.mean(power)
-    if mean <= 0:
-        return 0.0
-    ratio = peak / mean
-    # squash into 0..1 with a calibrated ceiling (see docstring)
-    return float(1 - np.exp(-3.5 * ratio / len(samples)))
+    peakiness = 0.0 if mean <= 0 else float(1 - np.exp(-3.5 * (peak / mean) / len(samples)))
+    return {
+        "freqs": freqs.tolist(),
+        "power": (power / (peak + 1e-12)).tolist(),  # normalized 0..1 plot share
+        "peakiness": peakiness,
+    }
+
+
+def _mth_power_peakiness(samples: np.ndarray, m: int) -> float:
+    """Classic M-th power method peakiness (see mth_power_spectrum)."""
+    return mth_power_spectrum(samples, m)["peakiness"]
 
 
 def _ring_count(samples: np.ndarray, n_bins: int = 32) -> int:

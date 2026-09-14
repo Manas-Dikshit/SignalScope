@@ -132,3 +132,26 @@ def score_deinterleave_candidate(recovered_bits: np.ndarray) -> float:
     transitions = np.mean(np.abs(np.diff(recovered_bits.astype(int))))
     # real coded/data bitstreams are rarely perfectly random (0.5) or near-constant
     return float(1.0 - 2.0 * abs(transitions - 0.5))
+
+
+def run_length_histogram(bits: np.ndarray) -> dict:
+    """Run-length histogram of identical-bit runs, exposed as proof data for why a
+    de-interleaving hypothesis ranks the way it does (a correct de-interleave
+    removes the periodic long runs that block/diagonal interleavers inject)."""
+    if len(bits) == 0:
+        return {"run_lengths": [], "counts": [], "max_run": 0}
+    runs = []
+    run = 1
+    for i in range(1, len(bits)):
+        if bits[i] == bits[i - 1]:
+            run += 1
+        else:
+            runs.append(run)
+            run = 1
+    runs.append(run)
+    lengths, counts = np.unique(np.array(runs), return_counts=True)
+    return {
+        "run_lengths": lengths.tolist(),
+        "counts": counts.tolist(),
+        "max_run": int(np.max(lengths)) if len(lengths) else 0,
+    }
