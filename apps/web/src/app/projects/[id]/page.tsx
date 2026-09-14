@@ -97,18 +97,18 @@ export default function AnalysisWorkspacePage() {
     enabled: !!projectId,
   });
 
-  const { data: analysis, isError: analysisError } = useQuery({
-    queryKey: ["analysis", projectId, fecType],
-    queryFn: () => projectsApi.analysis(projectId, fecType),
-    enabled: !!projectId,
-  });
-
   const [roiStart, setRoiStart] = React.useState(0);
   const [roiEnd, setRoiEnd] = React.useState(100);
   const [activeTab, setActiveTab] = React.useState("waveform");
   const [analysisTab, setAnalysisTab] = React.useState("spectrum");
   const [fecType, setFecType] = React.useState("convolutional");
   const FEC_TYPES = ["convolutional", "reed_solomon", "ldpc", "concatenated"];
+
+  const { data: analysis, isError: analysisError } = useQuery({
+    queryKey: ["analysis", projectId, fecType],
+    queryFn: () => projectsApi.analysis(projectId, fecType),
+    enabled: !!projectId,
+  });
 
   const meta = recording?.metadata_entry;
   const totalSamples = recording?.total_samples ?? 0;
@@ -963,7 +963,15 @@ function BurstPanel({
   burstData: BurstDetection | null;
   detectBursts: () => void;
   duration: number;
-  burstStats?: [string, { name: string; value: number | string | null; unit: string | null; source: string; confidence: number | null }][];
+  burstStats?: [string, {
+    name: string;
+    value: number | string | null;
+    unit: string | null;
+    source: string;
+    confidence: number | null;
+    evidence?: string[];
+    warnings?: string[];
+  }][];
 }) {
   if (!showBursts) {
     return (
