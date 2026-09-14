@@ -138,15 +138,35 @@ def estimate_parameters_task(self, project_id_str: str):
             mod_est,
             *sym_rates,
         ]
+
+        # Proof spectra are computed on a bounded preview slice so the full-estimate
+        # job stays fast even for multi-hundred-MB recordings.
+        from signalscope_dsp.modulation.classifier import mth_power_spectrum
+        from signalscope_dsp.modulation.symbol_rate import symbol_clock_spectrum
+        preview = conditioned[:100_000]
+        mod_proof = {f"order_{o}": mth_power_spectrum(preview, o) for o in (2, 4, 8)}
+        sr_proof = symbol_clock_spectrum(preview, sr) if len(preview) > 32 else None
+
+        def _evidence_json(est, extra_proof: dict | None = None) -> dict:
+            data = {"evidence": est.evidence, "warnings": est.warnings,
+                    "alternatives": [a.to_dict() for a in est.alternatives]}
+            if extra_proof:
+                data["proof"] = extra_proof
+            return data
+
         for est in estimates_to_store:
-            value = est.to_dict()
+            proof = None
+            if est.name == "modulation":
+                proof = mod_proof
+            elif est.name == "symbol_rate" and sr_proof is not None:
+                proof = {"symbol_clock_spectrum": {"direct": sr_proof}}
             row = ParameterEstimate(
                 project_id=project_id,
                 parameter_name=est.name,
-                value_json=value,
+                value_json=est.to_dict(),
                 value_type=type(est.value).__name__ if est.value is not None else "None",
                 confidence=est.confidence,
-                evidence_json={"evidence": est.evidence, "warnings": est.warnings, "alternatives": [a.to_dict() for a in est.alternatives]},
+                evidence_json=_evidence_json(est, proof),
                 source=est.source.value,
             )
             db.add(row)
@@ -159,7 +179,7 @@ def estimate_parameters_task(self, project_id_str: str):
                 value_json=est.to_dict(),
                 value_type=type(est.value).__name__ if est.value is not None else "None",
                 confidence=est.confidence,
-                evidence_json={"evidence": est.evidence, "warnings": est.warnings},
+                evidence_json=_evidence_json(est),
                 source=est.source.value,
             )
             db.add(row)
