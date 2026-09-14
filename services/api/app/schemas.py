@@ -224,6 +224,31 @@ class AnalysisModulation(BaseModel):
     confidence: float | None
     evidence: list[str]
     alternatives: list[dict[str, Any]]
+    warnings: list[str]
+    # plot-ready M-th power spectra (orders 2/4/8) backing the hypothesis
+    proof: dict[str, dict[str, Any]]
+
+
+class SymbolRateCandidate(BaseModel):
+    value: float | None
+    unit: str
+    source: str
+    confidence: float | None
+    evidence: list[str]
+
+
+class DeinterleaveCandidate(BaseModel):
+    algorithm: str
+    params: dict[str, Any]
+    validation_score: float
+    run_length_histogram: dict[str, Any]
+    recovered_preview: str
+
+
+class AnalysisDeinterleave(BaseModel):
+    best_attempt: str
+    validation_score: float
+    candidates: list[DeinterleaveCandidate]
 
 
 class AnalysisDemod(BaseModel):
@@ -240,7 +265,12 @@ class AnalysisDemod(BaseModel):
 
 class AnalysisFEC(BaseModel):
     decoded_bits_count: int
-    path_metric: float
+    path_metric: float | None
+    fec_type: str
+    corrected_symbols: int
+    corrected_erasures: int
+    stage_failed: str | None
+    confidence: float | None
     crc_valid: bool | None
     crc_detail: str
     first_bytes_hex: str
@@ -261,7 +291,9 @@ class DeepAnalysisResponse(BaseModel):
     modulation: AnalysisModulation
     symbol_rate_hz: float | None
     symbol_rate_confidence: float | None
-    deinterleave: dict[str, Any]
+    symbol_rate_candidates: list[SymbolRateCandidate]
+    deinterleave: AnalysisDeinterleave
+    fec_type: str
     demodulation: AnalysisDemod
     fec: AnalysisFEC
     correlation: AnalysisCorrelation
