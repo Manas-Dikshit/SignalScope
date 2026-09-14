@@ -46,7 +46,7 @@ def test_concatenated_reports_stage_failure_honestly():
     # well past the combined capability: must fail loudly, never fake success
     msg = _message()
     coded = concatenated_encode(msg)
-    bad = _flip(coded, 100, seed=11)
+    bad = _flip(coded, 115, seed=11)
     result = concatenated_decode(bad)
     assert result.stage_failed is not None
     assert not result.reed_solomon.syndrome_zero
