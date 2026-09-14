@@ -898,25 +898,35 @@ export default function AnalysisWorkspacePage() {
           {estimates.length > 0 ? (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {estimates.map((est) => (
-                  <MetricCard
-                    key={est.id}
-                    label={est.parameter_name.replaceAll("_", " ")}
-                    value={est.value_json?.value as number | string | null ?? null}
-                    unit={est.value_json?.unit as string | null ?? null}
-                    source={est.source as import("@/lib/types").Source}
-                    confidence={est.confidence}
-                    accent={
-                      est.parameter_name.includes("duty") ||
-                      est.parameter_name.includes("snr") ||
-                      est.parameter_name.includes("bandwidth")
-                        ? "primary"
-                        : "secondary"
-                    }
-                    rangeMin={est.parameter_name === "snr" ? -10 : undefined}
-                    rangeMax={est.parameter_name === "snr" ? 60 : undefined}
-                  />
-                ))}
+                {estimates.map((est) => {
+                  const ev = (est.evidence_json ?? {}) as {
+                    evidence?: string[];
+                    warnings?: string[];
+                    proof?: Record<string, unknown>;
+                  };
+                  return (
+                    <MetricCard
+                      key={est.id}
+                      label={est.parameter_name.replaceAll("_", " ")}
+                      value={est.value_json?.value as number | string | null ?? null}
+                      unit={est.value_json?.unit as string | null ?? null}
+                      source={est.source as import("@/lib/types").Source}
+                      confidence={est.confidence}
+                      accent={
+                        est.parameter_name.includes("duty") ||
+                        est.parameter_name.includes("snr") ||
+                        est.parameter_name.includes("bandwidth")
+                          ? "primary"
+                          : "secondary"
+                      }
+                      rangeMin={est.parameter_name === "snr" ? -10 : undefined}
+                      rangeMax={est.parameter_name === "snr" ? 60 : undefined}
+                      evidence={ev.evidence}
+                      warnings={ev.warnings}
+                      proof={ev.proof}
+                    />
+                  );
+                })}
               </div>
               {numericEstimates.length > 0 && (
                 <GraphToggle
