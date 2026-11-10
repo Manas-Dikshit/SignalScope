@@ -81,7 +81,7 @@ Most signal analyzers print one number and call it truth. SignalScope treats eve
 
 **DSP** · NumPy 2.2 · SciPy 1.15 · Pillow (evidence PNGs) · Pytest
 
-**AI (optional)** · Gemma 4 E4B via Transformers or a deterministic offline fake backend
+**AI (optional)** · Gemma 4 E2B via Transformers or a deterministic offline fake backend
 
 ---
 
@@ -204,7 +204,7 @@ To use a real local model:
 
 ```bash
 AI_BACKEND=transformers
-AI_MODEL=google/gemma-4-E4B-it
+AI_MODEL=google/gemma-4-E2B-it
 AI_INSTALL_TRANSFORMERS=1
 docker compose --profile ai up --build
 ```
@@ -223,7 +223,7 @@ docker compose --profile ai up --build
 - Strict JSON schema validation, evidence-reference validation, numeric guard, allowlisted tool dispatch.
 - Bounded tool loop (`AI_MAX_TOOL_STEPS`, default 6) with per-call timeouts.
 - On failure, DSP results are preserved and the UI shows an explicit error/fallback.
-- Model: **Gemma 4 E4B IT** (`google/gemma-4-E4B-it`), Apache-2.0. Runs locally.
+- Model: **Gemma 4 E2B IT** (`google/gemma-4-E2B-it`), Apache-2.0. Runs locally.
 
 See [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](./docs/GEMMA4_IMPLEMENTATION_PLAN.md) and [`services/ai/README.md`](./services/ai/README.md) for the full contract, model options, and GPU notes.
 
@@ -380,7 +380,7 @@ SignalScope/
 | [`docs/REQUIREMENTS_TRACEABILITY.md`](./docs/REQUIREMENTS_TRACEABILITY.md) | Requirement → implementation → test mapping |
 | [`opensourceAI.md`](./opensourceAI.md) | Open-source/open-weight AI integration: model, harness, guardrails, challenge-rules mapping |
 | [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](./docs/GEMMA4_IMPLEMENTATION_PLAN.md) | Gemma 4 phases, contracts, guardrails, demo script |
-| [`MODEL_CARD.md`](./MODEL_CARD.md) | Gemma 4 E4B model card, anti-hallucination architecture, and safety guardrails |
+| [`MODEL_CARD.md`](./MODEL_CARD.md) | Gemma 4 E2B model card, anti-hallucination architecture, and safety guardrails |
 | [`skills/signal-triage/SKILL.md`](./skills/signal-triage/SKILL.md) | Agent Skill specification for autonomous RF signal triage |
 | [`docs/DESIGN_NOTES.md`](./docs/DESIGN_NOTES.md) | UI visual-depth rationale and deferred ML note |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Layout, conventions, test expectations, PR checklist |

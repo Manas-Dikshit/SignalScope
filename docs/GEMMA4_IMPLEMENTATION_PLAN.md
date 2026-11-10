@@ -80,7 +80,7 @@ Source: <https://ai.google.dev/gemma/docs/core>
 | Model | Parameters | Inputs | Context | Q4 memory |
 |---|---|---:|---:|---:|
 | `google/gemma-4-E2B-it` | 2.3B effective | Text, image, audio | 128K | ~2.9 GB |
-| `google/gemma-4-E4B-it` | 4.5B effective | Text, image, audio | 128K | ~4.5 GB |
+| `google/gemma-4-E2B-it` | 2.3B effective | Text, image, audio | 128K | ~2.9 GB | 4-bit |
 | `google/gemma-4-12B-it` | 11.95B | Text, image, audio | 256K | ~6.7 GB |
 | `google/gemma-4-26B-A4B-it` | 25.2B total / 3.8B active | Text, image | 256K | ~14.4 GB |
 | `google/gemma-4-31B-it` | 30.7B | Text, image | 256K | ~17.5 GB |
@@ -94,7 +94,7 @@ Other facts:
 - Image content should go **before** text in multimodal prompts; audio after text.
 - Official QAT Q4_0 GGUF builds exist for local deployment.
 
-**Recommended default for the hackathon:** `google/gemma-4-E4B-it` QAT Q4_0. It supports image + audio, fits on a laptop/consumer GPU, and is strong enough for evidence synthesis.
+**Recommended default for the hackathon:** `google/gemma-4-E2B-it` QAT Q4_0. It supports image + audio, fits on a laptop/consumer GPU, and is strong enough for evidence synthesis.
 
 ---
 
@@ -729,7 +729,7 @@ Add to `.env.example`:
 # AI service (optional)
 AI_ENABLED=false
 AI_SERVICE_URL=http://ai:8100
-AI_MODEL=google/gemma-4-E4B-it
+AI_MODEL=google/gemma-4-E2B-it
 AI_BACKEND=fake            # fake | transformers
 AI_TIMEOUT_SECONDS=120
 AI_MAX_TOOL_STEPS=6
@@ -756,7 +756,7 @@ ai:
     context: .
     dockerfile: services/ai/Dockerfile
   environment:
-    AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+    AI_MODEL: ${AI_MODEL:-google/gemma-4-E2B-it}
     AI_BACKEND: ${AI_BACKEND:-transformers}
     HF_HOME: /models
   ports:
@@ -778,8 +778,8 @@ AI_SERVICE_URL: http://ai:8100
 
 For a local demo:
 
-- CPU with E2B/E4B QAT Q4_0 GGUF: works but slow.
-- 8 GB GPU with E4B 4-bit: good demo.
+- CPU with E2B/E2B QAT Q4_0 GGUF: works but slow.
+- 8 GB GPU with E2B 4-bit: good demo.
 - 16 GB GPU with 12B 4-bit: strong demo.
 - 24 GB GPU with 26B-A4B/31B 4-bit: best reasoning, no audio on 26B/31B.
 
@@ -888,7 +888,7 @@ Tasks:
 - [ ] Run the DSP pipeline to create evidence bundles.
 - [ ] Render spectrogram/constellation images.
 - [ ] Create analyst-style targets with citations and tool calls.
-- [ ] QLoRA-tune Gemma 4 E4B.
+- [ ] QLoRA-tune Gemma 4 E2B.
 - [ ] Evaluate on held-out synthetic and real recordings.
 
 Acceptance:
@@ -997,7 +997,7 @@ Acceptance:
 | Raw IQ too large | Send rendered spectrogram/constellation images, never IQ. |
 | Audio modality misused | Only send true audio-band WAV; never complex IQ. |
 | Slow inference | Invoke only on low confidence/conflict; thinking off by default. |
-| GPU unavailable | E2B/E4B QAT Q4_0 GGUF on CPU. |
+| GPU unavailable | E2B QAT Q4_0 GGUF on CPU. |
 | Prompt injection in metadata | Treat filenames/SigMF text as untrusted data; no tool execution from text. |
 | Judges see a wrapper | Demo tool trace, conflict detection, validation, and offline inference. |
 | Scope creep | Phase gates: one-shot brief first, tools second, gallery last. |

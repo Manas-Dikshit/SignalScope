@@ -173,7 +173,7 @@ docker compose --profile ai up --build
 ```dotenv
 AI_ENABLED=true
 AI_BACKEND=transformers
-AI_MODEL=google/gemma-4-E4B-it
+AI_MODEL=google/gemma-4-E2B-it
 AI_INSTALL_TRANSFORMERS=1
 INTERNAL_API_TOKEN=change-me
 ```

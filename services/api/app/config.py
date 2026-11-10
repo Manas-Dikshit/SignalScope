@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # DSP/API stack runs exactly as before.
     AI_ENABLED: bool = False
     AI_SERVICE_URL: str = "http://ai:8100"
-    AI_MODEL: str = "google/gemma-4-E4B-it"
+    AI_MODEL: str = "google/gemma-4-E2B-it"
     AI_TIMEOUT_SECONDS: float = 120.0
     AI_PROMPT_VERSION: str = "2026-11-01"
 
