@@ -12,7 +12,7 @@ results**, running fully locally inside the same stack.
 | # | Component | What it is | License |
 |---|-----------|------------|---------|
 | 1 | SignalScope (this repo) | DSP + API + web workbench + **original model harness** | **MIT** ([./LICENSE](./LICENSE)) |
-| 2 | [`google/gemma-4-E4B-it`](https://huggingface.co/google/gemma-4-E4B-it) | The open-weight analyst model that powers the AI insight feature | **Apache 2.0** (open-source *and* open-weight) |
+| 2 | [`google/gemma-4-E2B-it`](https://huggingface.co/google/gemma-4-E2B-it) | The open-weight analyst model that powers the AI insight feature | **Apache 2.0** (open-source *and* open-weight) |
 | 3 | Runtime stack | Hugging Face `transformers`, `torch`, `accelerate`, FastAPI | BSD/Apache/OSI-approved |
 
 We do **not** call any closed or hosted model. No OpenAI, Anthropic, or cloud
@@ -41,16 +41,16 @@ The challenge allows several approaches; we use **two of them together**:
 
 | Property | Value |
 |---|---|
-| Model | `google/gemma-4-E4B-it` ([Hugging Face](https://huggingface.co/google/gemma-4-E4B-it)) |
+| Model | `google/gemma-4-E2B-it` ([Hugging Face](https://huggingface.co/google/gemma-4-E2B-it)) |
 | Terms / license | **Apache 2.0** — the weights can be downloaded and run under the model provider's terms; the license is listed on the model card linked here |
 | Size class | Effective ~4B parameters → **small language model** (≤ 10 B per the challenge definition) |
-| Modalities | Text + image + audio for the E2B/E4B variants |
+| Modalities | Text + image + audio for the E2B variants |
 | Where weights live | Downloaded from Hugging Face into the `ai_models` Docker volume (`HF_HOME=/models`), never baked into the image |
 
 Gemma 4 was chosen because the task is *engineering explanation, not
 generation for its own sake*: we need a small, local, license-clean model that
 (1) follows a strict JSON output contract, (2) emits tool calls reliably, and
-(3) fits a laptop demo. E4B hits all three while staying under the SLM limit.
+(3) fits a laptop demo. E2B hits all three while staying under the SLM limit.
 
 **What the model actually does** — it is the "Generate insight" feature:
 
@@ -133,7 +133,7 @@ and visualised in the UI, so every AI action is auditable.
 * The code is published in a **public GitHub repository** under the **MIT
   license** ([./LICENSE](./LICENSE)).
 * The model's weights are published on Hugging Face under **Apache 2.0**
-  ([model card](https://huggingface.co/google/gemma-4-E4B-it)).
+  ([model card](https://huggingface.co/google/gemma-4-E2B-it)).
 * The current model + prompt version (`2026-11-01`) are stamped onto every
   generated insight (`model_name`, `prompt_version` columns), so results stay
   reproducible and attributable.
@@ -147,8 +147,8 @@ and visualised in the UI, so every AI action is auditable.
 | **Public repo, open-source license** | Public GitHub repo, MIT (`./LICENSE`) |
 | **Agent skill standard** | N/A — no agent-skill package is distributed; the harness is submitted in the "open-weight LLM integration / original model harness" approach instead |
 | **Model harness: original build** | `services/ai/` is an original from-scratch harness (agent loop + allowlisted tool dispatch + validation + fallback), not an adapted existing harness |
-| **"Open weight" named + licensed** | Gemma 4 E4B-it, Apache 2.0, linked above |
-| **SLM ≤ 10 B / LLM > 10 B classification** | E4B ≈ 4B effective parameters → submitted in the **small** language model class |
+| **"Open weight" named + licensed** | Gemma 4 E2B-it, Apache 2.0, linked above |
+| **SLM ≤ 10 B / LLM > 10 B classification** | E2B ≈ 2.3B effective parameters → submitted in the **small** language model class |
 
 ## 7. Running it
 
@@ -162,7 +162,7 @@ tests and UI work.
 #    .env:
 AI_ENABLED=true
 AI_BACKEND=transformers          # real Gemma 4 weights, loaded lazily
-AI_MODEL=google/gemma-4-E4B-it
+AI_MODEL=google/gemma-4-E2B-it
 AI_DEVICE=auto                   # CUDA when present, else CPU
 INSTALL_TRANSFORMERS=1           # pulls torch>=2.6 / transformers>=5.10.1
 

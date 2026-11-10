@@ -177,7 +177,7 @@ Every stage emits candidates with **evidence strings**. The final `Estimate` car
 
 - `services/ai` is a separate FastAPI service on port `8100`, started with the `ai` Compose profile.
 - Backends: deterministic `fake` (no model download) and `transformers` (local Gemma 4). Other local runtimes (GGUF/Ollama-class) can be added behind the same `InsightBackend` protocol.
-- Default model: `google/gemma-4-E4B-it` (Apache-2.0).
+- Default model: `google/gemma-4-E2B-it` (Apache-2.0).
 - Rendered evidence images (PSD, waterfall, constellation, M-th power) are generated with Pillow and sent as bounded PNG data URIs; raw I/Q is never sent.
 - The model may call only: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`, `search_similar_recordings`.
 - Tool count and duration are bounded by `AI_MAX_TOOL_STEPS` and `AI_TOOL_TIMEOUT_SECONDS`.

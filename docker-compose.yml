@@ -51,7 +51,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       AI_ENABLED: ${AI_ENABLED:-false}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8100}
-      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E2B-it}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-120}
       AI_PROMPT_VERSION: ${AI_PROMPT_VERSION:-2026-11-01}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-}
@@ -86,7 +86,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/2
       AI_ENABLED: ${AI_ENABLED:-false}
       AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8100}
-      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E2B-it}
       AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-120}
       AI_PROMPT_VERSION: ${AI_PROMPT_VERSION:-2026-11-01}
       AI_EVIDENCE_IMAGES_ENABLED: ${AI_EVIDENCE_IMAGES_ENABLED:-true}
@@ -111,7 +111,7 @@ services:
         condition: service_healthy
     environment:
       AI_BACKEND: ${AI_BACKEND:-fake}
-      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E2B-it}
       AI_DEVICE: ${AI_DEVICE:-auto}
       AI_QUANTIZATION: ${AI_QUANTIZATION:-none}
       AI_MAX_GPU_MEMORY: ${AI_MAX_GPU_MEMORY:-}

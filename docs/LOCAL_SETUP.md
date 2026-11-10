@@ -157,7 +157,7 @@ Docker Compose; running natively, point the URLs at `localhost`.
 |---|---|---|
 | `AI_ENABLED` | `false` | Enable the insights endpoint and Celery task |
 | `AI_SERVICE_URL` | `http://ai:8100` | AI sidecar URL |
-| `AI_MODEL` | `google/gemma-4-E4B-it` | Model identifier |
+| `AI_MODEL` | `google/gemma-4-E2B-it` | Model identifier |
 | `AI_BACKEND` | `fake` | `fake` or `transformers` (AI service) |
 | `AI_TIMEOUT_SECONDS` | `120` | Whole-brief timeout |
 | `AI_PROMPT_VERSION` | `2026-11-01` | Stored with each insight |
@@ -204,7 +204,7 @@ docker compose --profile ai up -d --build
 ```dotenv
 AI_ENABLED=true
 AI_BACKEND=transformers
-AI_MODEL=google/gemma-4-E4B-it
+AI_MODEL=google/gemma-4-E2B-it
 AI_INSTALL_TRANSFORMERS=1
 INTERNAL_API_TOKEN=change-me
 ```

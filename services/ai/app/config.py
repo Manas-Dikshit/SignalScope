@@ -14,10 +14,10 @@ class AISettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     AI_BACKEND: str = "fake"  # fake | transformers
-    AI_MODEL: str = "google/gemma-4-E4B-it"
+    AI_MODEL: str = "google/gemma-4-E2B-it"
     AI_DEVICE: str = "auto"
     # none | 4bit | 8bit. 4bit needs the optional bitsandbytes dependency and
-    # is what makes E2B/E4B fit on consumer GPUs (8 GB or less).
+    # is what makes E2B fit on consumer GPUs (8 GB or less).
     AI_QUANTIZATION: str = "none"
     # Optional cap for the accelerator, e.g. "5GiB". Empty means let
     # accelerate decide. Remaining layers spill to CPU when capped.

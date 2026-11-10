@@ -1,8 +1,14 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/apps/web/public/web-app-manifest-512x512.png" alt="SignalScope AI" width="96" />
+
 # SignalScope AI — Project Description
 
 **An offline, explainable RF signal-analysis workbench for authorized recordings.**
 
 Version 0.1.0 · MIT License · Deterministic DSP core · Optional local Gemma 4 analyst
+
+</div>
 
 **Repository:** https://github.com/Manas-Dikshit/SignalScope
 
@@ -317,7 +323,7 @@ citation, and numeric validation run before a cited brief is stored with
 ### 10.3 Backends
 
 - `fake` — deterministic, no weights, used for tests and offline demos;
-- `transformers` — local Gemma 4 (`google/gemma-4-E4B-it`, Apache-2.0), loaded
+- `transformers` — local Gemma 4 (`google/gemma-4-E2B-it`, Apache-2.0), loaded
   lazily so tests never import torch.
 
 Other local runtimes can be added behind the same `InsightBackend` protocol.
@@ -447,7 +453,7 @@ to the file in the repository, in case the renderer blocks remote images.
 | Backend | FastAPI 0.115, Pydantic v2, SQLAlchemy 2.0 async, Alembic, Celery 5.5, python-jose, passlib/Argon2 |
 | Data | PostgreSQL 16, Redis 7, Docker volumes |
 | DSP | Python 3.11–3.13, NumPy 2.2, SciPy 1.15, Pillow (evidence PNGs) |
-| AI | Gemma 4 E4B via Transformers (Apache-2.0), deterministic fake backend |
+| AI | Gemma 4 E2B via Transformers (Apache-2.0), deterministic fake backend |
 | Testing | Pytest, pytest-asyncio, httpx, Vitest, Testing Library |
 | Runtime | Docker Compose (base + dev overlay, optional `ai` profile) |
 

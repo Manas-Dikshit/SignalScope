@@ -33,7 +33,7 @@ Then:
 
 ```bash
 AI_BACKEND=transformers \
-AI_MODEL=google/gemma-4-E4B-it \
+AI_MODEL=google/gemma-4-E2B-it \
 uvicorn app.main:app --host 0.0.0.0 --port 8100
 ```
 
@@ -69,7 +69,7 @@ visible without downloading weights.
 
 ## Model
 
-`AI_MODEL` defaults to `google/gemma-4-E4B-it` (Apache 2.0). E2B/E4B accept
+`AI_MODEL` defaults to `google/gemma-4-E2B-it` (Apache 2.0). E2B accept
 text, image, and audio; the 26B/31B variants are text+image only. See
 `docs/GEMMA4_IMPLEMENTATION_PLAN.md` for memory guidance. The deterministic
 `FakeBackend` is the default for tests and offline demos.

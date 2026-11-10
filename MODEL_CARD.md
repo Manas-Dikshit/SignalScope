@@ -1,9 +1,9 @@
-# Model Card: SignalScope RF Analyst Agent (Gemma 4 E4B-it)
+# Model Card: SignalScope RF Analyst Agent (Gemma 4 E2B-it)
 
 ## 1. Model Details
 
 - **Model Name:** SignalScope RF Analyst Agent
-- **Base Foundation Model:** `google/gemma-4-E4B-it` (Google Gemma 4, 4.5B effective parameters, multimodal instruction-tuned)
+- **Base Foundation Model:** `google/gemma-4-E2B-it` (Google Gemma 4, 2B effective parameters, multimodal instruction-tuned)
 - **Base Model License:** Apache 2.0 (Google Gemma Open Model Terms)
 - **Harness & Application License:** MIT License (SignalScope AI)
 - **Harness Architecture:** Token-bounded multi-step tool-calling agent with deterministic DSP grounding, multimodal visual verification, and anti-hallucination numeric placeholder substitution
