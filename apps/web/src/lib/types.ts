@@ -34,6 +34,17 @@ export interface RecordingMeta {
   created_at: string;
 }
 
+export interface DemoSampleItem {
+  id: string;
+  name: string;
+  description: string;
+  modulation: string;
+  sample_rate_hz: number;
+  symbol_rate_hz: number;
+  snr_db: number;
+  filename: string;
+}
+
 export interface Recording {
   id: string;
   original_filename: string;

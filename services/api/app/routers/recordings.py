@@ -230,6 +230,176 @@ async def list_recordings(
     return PaginatedResponse(items=items, total=total)
 
 
+class DemoSampleInfo(BaseModel):
+    id: str
+    name: str
+    description: str
+    modulation: str
+    sample_rate_hz: float
+    symbol_rate_hz: float
+    snr_db: float
+    filename: str
+
+
+class LoadDemoRequest(BaseModel):
+    sample_id: str
+
+
+DEMO_CATALOG: dict[str, dict] = {
+    "qpsk_48k": {
+        "id": "qpsk_48k",
+        "name": "QPSK Carrier (48 kHz)",
+        "description": "Clean 4-phase PSK constellation with 2400 baud symbol rate and 25 dB SNR.",
+        "modulation": "qpsk",
+        "sample_rate_hz": 48000.0,
+        "symbol_rate_hz": 2400.0,
+        "carrier_offset_hz": 0.0,
+        "snr_db": 25.0,
+        "n_symbols": 4000,
+        "filename": "demo_qpsk_48k.wav",
+    },
+    "2fsk_48k": {
+        "id": "2fsk_48k",
+        "name": "2-FSK Binary FSK (48 kHz)",
+        "description": "Binary FSK at 1200 baud with 1.2 kHz deviation tone spacing.",
+        "modulation": "2fsk",
+        "sample_rate_hz": 48000.0,
+        "symbol_rate_hz": 1200.0,
+        "fsk_deviation_hz": 1200.0,
+        "carrier_offset_hz": 0.0,
+        "snr_db": 20.0,
+        "n_symbols": 2000,
+        "filename": "demo_2fsk_48k.wav",
+    },
+    "16qam_48k": {
+        "id": "16qam_48k",
+        "name": "16-QAM Signal (48 kHz)",
+        "description": "16-state Quadrature Amplitude Modulation constellation with 30 dB SNR.",
+        "modulation": "16qam",
+        "sample_rate_hz": 48000.0,
+        "symbol_rate_hz": 2400.0,
+        "carrier_offset_hz": 0.0,
+        "snr_db": 30.0,
+        "n_symbols": 3000,
+        "filename": "demo_16qam_48k.wav",
+    },
+    "bpsk_burst_48k": {
+        "id": "bpsk_burst_48k",
+        "name": "BPSK Bursts (48 kHz)",
+        "description": "Pulsed BPSK with intermittent transmissions for testing burst detection.",
+        "modulation": "bpsk",
+        "sample_rate_hz": 48000.0,
+        "symbol_rate_hz": 2400.0,
+        "carrier_offset_hz": 0.0,
+        "snr_db": 22.0,
+        "n_symbols": 4000,
+        "burst": True,
+        "burst_on_symbols": 400,
+        "burst_off_symbols": 200,
+        "filename": "demo_bpsk_burst_48k.wav",
+    },
+    "8psk_48k": {
+        "id": "8psk_48k",
+        "name": "8-PSK Signal (48 kHz)",
+        "description": "8-phase circular constellation at 2400 baud with 25 dB SNR.",
+        "modulation": "8psk",
+        "sample_rate_hz": 48000.0,
+        "symbol_rate_hz": 2400.0,
+        "carrier_offset_hz": 0.0,
+        "snr_db": 25.0,
+        "n_symbols": 3000,
+        "filename": "demo_8psk_48k.wav",
+    },
+}
+
+
+@router.get("/demos", response_model=list[DemoSampleInfo])
+async def list_demo_samples():
+    """List built-in demo RF signal samples available for immediate testing."""
+    return [
+        DemoSampleInfo(
+            id=item["id"],
+            name=item["name"],
+            description=item["description"],
+            modulation=item["modulation"],
+            sample_rate_hz=item["sample_rate_hz"],
+            symbol_rate_hz=item["symbol_rate_hz"],
+            snr_db=item["snr_db"],
+            filename=item["filename"],
+        )
+        for item in DEMO_CATALOG.values()
+    ]
+
+
+@router.post("/load-demo", response_model=RecordingUploadResponse, status_code=status.HTTP_201_CREATED)
+async def load_demo_recording(
+    req: LoadDemoRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Instantly generate/load a demo RF signal for the current user."""
+    info = DEMO_CATALOG.get(req.sample_id)
+    if not info:
+        raise HTTPException(status_code=404, detail=f"Unknown demo sample: {req.sample_id}")
+
+    # Check if this demo was already loaded by this user
+    existing = await db.execute(
+        select(Recording).where(
+            Recording.original_filename == info["filename"],
+            Recording.uploaded_by == user.id,
+            Recording.status != "deleted",
+        )
+    )
+    existing_rec = existing.scalars().first()
+    if existing_rec:
+        return existing_rec
+
+    rec_id = uuid.uuid4()
+    upload_dir = Path(settings.DATA_DIR) / "uploads" / str(user.id) / str(rec_id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    storage_path = upload_dir / info["filename"]
+
+    # Synthesize signal
+    synth_kwargs = {k: v for k, v in info.items() if k not in ("id", "name", "description", "filename")}
+    cfg = SynthConfig(**synth_kwargs)
+    sig = generate_signal(cfg).samples
+    norm_i = np.clip(np.real(sig) * 16000, -32767, 32767).astype(np.int16)
+    norm_q = np.clip(np.imag(sig) * 16000, -32767, 32767).astype(np.int16)
+    stereo = np.stack([norm_i, norm_q], axis=1)
+    wavfile.write(str(storage_path), int(cfg.sample_rate_hz), stereo)
+
+    # Compute sha256 and size
+    hasher = hashlib.sha256()
+    with storage_path.open("rb") as f:
+        while chunk := f.read(_UPLOAD_CHUNK_BYTES):
+            hasher.update(chunk)
+    file_hash = hasher.hexdigest()
+    file_size = storage_path.stat().st_size
+
+    # Validate and load metadata
+    params = {"stereo_mode": "left_is_i_right_is_q"}
+    rec = await _validate_and_load(str(storage_path), "wav", params, max_samples=100_000)
+
+    recording = Recording(
+        id=rec_id,
+        original_filename=info["filename"],
+        storage_path=str(storage_path),
+        file_hash=file_hash,
+        file_size=file_size,
+        file_format="wav",
+        uploaded_by=user.id,
+        status="uploaded",
+        duration_seconds=rec.duration_s(),
+        total_samples=rec.metadata.total_samples,
+    )
+    db.add(recording)
+    await db.flush()
+    _persist_metadata(db, rec_id, rec)
+    await db.commit()
+    await db.refresh(recording)
+    return recording
+
+
 @router.get("/{recording_id}", response_model=RecordingResponse)
 async def get_recording(
     recording_id: uuid.UUID,

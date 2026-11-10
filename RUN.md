@@ -1,6 +1,6 @@
 # RUN.md — Run SignalScope AI (everything)
 
-Verified against the current repo: **API tests (32) ✅, DSP tests (57) ✅,
+Verified against the current repo: **API tests (32) ✅, DSP tests (59) ✅,
 frontend tests (26) ✅, frontend build ✅, full Docker stack (postgres + redis +
 api + worker + web) all healthy ✅.**
 
@@ -120,7 +120,7 @@ cd services/api
 python -m pytest tests/ -q
 ```
 
-### Terminal B - DSP core tests (57)
+### Terminal B - DSP core tests (59)
 
 ```powershell
 cd services/dsp-worker

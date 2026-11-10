@@ -6,6 +6,7 @@ import { recordingsApi, projectsApi } from "@/lib/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UploadWizard } from "@/components/UploadWizard";
+import { DemoSamplesSection } from "@/components/DemoSamplesSection";
 import WaveformThumb from "@/components/WaveformThumb";
 import { formatBytes, formatDuration, formatFrequency } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -15,6 +16,7 @@ import {
   Clock,
   Plus,
   FileAudio,
+  Sparkles,
 } from "lucide-react";
 
 export default function RecordingsPage() {

@@ -9,6 +9,7 @@ import type {
   DashboardStats,
   DeepAnalysis,
   BurstDetection,
+  DemoSampleItem,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -76,6 +77,15 @@ export const recordingsApi = {
 
   preview: (id: string) =>
     request<PreviewData>(`/api/recordings/${id}/preview`),
+
+  listDemos: () => request<DemoSampleItem[]>("/api/recordings/demos"),
+
+  loadDemo: (sampleId: string) =>
+    request<Recording>("/api/recordings/load-demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sample_id: sampleId }),
+    }),
 
   upload: async (formData: FormData): Promise<Recording> => {
     const url = `${API_BASE}/api/recordings/upload`;
