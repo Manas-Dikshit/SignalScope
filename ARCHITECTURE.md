@@ -122,7 +122,7 @@ flowchart TB
 ### 1. Client layer
 
 - Next.js 14 App Router SPA with JWT cookie authentication.
-- TanStack Query owns server state. Jobs are polled every 2 s while `queued`/`running`; parameter and insight queries are invalidated when the job flips to `completed`.
+- TanStack Query owns server state. Parameter jobs poll every 2 s and insight jobs every 1.5 s while `queued`/`running`; results are invalidated when the job flips to `completed`.
 - Plotly renders waveform, I/Q scatter, PSD, waterfall, constellation, proof spectra, and ranked candidate bars.
 - `ProofPanel` drills into evidence inline on desktop and as a bottom sheet at ≤375 px.
 - The UI is installable (web manifest + icons) and responsive.
