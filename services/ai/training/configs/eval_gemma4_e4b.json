@@ -1,0 +1,6 @@
+{
+  "data_dir": "services/ai/training/data",
+  "split": "test",
+  "report": "services/ai/training/reports/eval_test.json",
+  "max_examples": 0
+}
