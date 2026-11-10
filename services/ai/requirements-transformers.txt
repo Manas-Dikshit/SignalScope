@@ -1,0 +1,6 @@
+# Optional runtime for AI_BACKEND=transformers.
+# Install on a GPU host after requirements.txt.
+torch>=2.6
+transformers>=5.10.1
+accelerate>=1.0
+pillow>=10.0

@@ -193,3 +193,106 @@ def estimate_parameters_task(self, project_id_str: str):
 
     _update_progress(self, "done", 100)
     return {"project_id": project_id_str, "status": "completed"}
+
+
+@celery_app.task(name="generate_insight", bind=True)
+def generate_insight_task(self, project_id_str: str):
+    """Build a provenance bundle and ask the local Gemma 4 sidecar for a brief.
+
+    AI failure must not destroy DSP results. A failed insight is stored with a
+    clear error so the UI can show a deterministic fallback.
+    """
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from .ai_client import request_insight_sync
+    from .models import AnalysisInsight, AnalysisProject, ParameterEstimate, Recording, RecordingMetadata
+
+    sync_url = settings.DATABASE_URL
+    for marker in ("+asyncpg", "+aiosqlite"):
+        sync_url = sync_url.replace(marker, "")
+    sync_engine = create_engine(sync_url)
+    SessionLocal = sessionmaker(bind=sync_engine)
+
+    project_id = uuid.UUID(project_id_str)
+    with SessionLocal() as db:
+        project = db.get(AnalysisProject, project_id)
+        if not project:
+            return {"error": "Project not found"}
+        rec = db.get(Recording, project.recording_id)
+        if not rec:
+            return {"error": "Recording not found"}
+        meta = db.query(RecordingMetadata).filter(RecordingMetadata.recording_id == rec.id).first()
+
+        _update_progress(self, "building_evidence", 20)
+        rows = (
+            db.query(ParameterEstimate)
+            .filter(ParameterEstimate.project_id == project_id)
+            .order_by(ParameterEstimate.created_at)
+            .all()
+        )
+        estimates = []
+        for row in rows:
+            value = dict(row.value_json or {})
+            value["name"] = row.parameter_name
+            value["source"] = row.source
+            value["confidence"] = row.confidence
+            evidence_json = row.evidence_json or {}
+            value.setdefault("evidence", evidence_json.get("evidence", []))
+            value.setdefault("alternatives", evidence_json.get("alternatives", []))
+            value.setdefault("warnings", evidence_json.get("warnings", []))
+            estimates.append(value)
+
+        evidence = {
+            "project_id": project_id_str,
+            "recording": {
+                "filename": rec.original_filename,
+                "format": rec.file_format,
+                "sample_rate_hz": meta.sample_rate if meta else None,
+                "center_frequency_hz": meta.center_frequency if meta else None,
+                "duration_seconds": rec.duration_seconds,
+                "total_samples": rec.total_samples,
+            },
+            "estimates": estimates,
+            "available_tools": [
+                "get_project_evidence",
+                "run_deep_analysis",
+                "try_demodulation",
+                "try_fec",
+            ],
+            "prompt_version": settings.AI_PROMPT_VERSION,
+        }
+
+        _update_progress(self, "requesting_ai", 60)
+        try:
+            response = request_insight_sync(project_id_str, evidence)
+            insight = AnalysisInsight(
+                project_id=project_id,
+                model_name=str(response.get("model_name") or settings.AI_MODEL),
+                prompt_version=str(response.get("prompt_version") or settings.AI_PROMPT_VERSION),
+                status="completed",
+                response_json=response,
+                tool_trace_json=response.get("tool_trace") or [],
+                citations_json=response.get("citations") or {},
+            )
+        except Exception as exc:
+            insight = AnalysisInsight(
+                project_id=project_id,
+                model_name=settings.AI_MODEL,
+                prompt_version=settings.AI_PROMPT_VERSION,
+                status="failed",
+                response_json={
+                    "summary": "AI service unavailable. DSP results are unchanged; verify them directly.",
+                    "limitations": [str(exc)],
+                    "citations": {},
+                },
+                tool_trace_json=[],
+                citations_json={},
+                error_message=str(exc),
+            )
+
+        db.add(insight)
+        db.commit()
+        db.refresh(insight)
+        _update_progress(self, "done", 100)
+        return {"project_id": project_id_str, "insight_id": str(insight.id), "status": insight.status}
