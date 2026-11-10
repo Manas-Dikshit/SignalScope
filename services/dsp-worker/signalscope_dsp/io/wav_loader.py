@@ -22,14 +22,33 @@ def _to_float(samples: np.ndarray) -> np.ndarray:
     return samples.astype(np.float32) / max(abs(info.min), info.max)
 
 
-def load_wav(path: str | Path, stereo_mode: StereoMode = "left_is_i_right_is_q") -> Recording:
+def load_wav(
+    path: str | Path,
+    stereo_mode: StereoMode = "left_is_i_right_is_q",
+    *,
+    sample_offset: int = 0,
+    max_samples: int | None = None,
+) -> Recording:
     """Load a .wav file into the normalized complex64 representation.
 
     Mono files are treated as real-valued signals (Q = 0), with a warning attached
     to the metadata so downstream stages know no true quadrature data is present.
+
+    `sample_offset` / `max_samples` bound the samples returned. PCM files are
+    memory-mapped so a window does not pull the whole recording into RAM;
+    `metadata.total_samples` always reports the full file length.
     """
     path = Path(path)
-    fs, raw = wavfile.read(str(path))
+    try:
+        fs, raw_all = wavfile.read(str(path), mmap=True)
+    except (ValueError, TypeError):
+        # Compressed / non-PCM WAV: scipy cannot memory-map, fall back to a full read.
+        fs, raw_all = wavfile.read(str(path))
+
+    total_samples = int(raw_all.shape[0])
+    sample_offset = max(0, sample_offset)
+    stop = None if max_samples is None else sample_offset + max_samples
+    raw = raw_all[sample_offset:stop]
     orig_dtype = str(raw.dtype)
     warnings: list[str] = []
 
@@ -82,9 +101,13 @@ def load_wav(path: str | Path, stereo_mode: StereoMode = "left_is_i_right_is_q")
         is_complex=is_complex,
         channel_count=channels,
         sample_dtype=orig_dtype,
-        duration_seconds=len(complex_samples) / fs if fs else None,
-        total_samples=len(complex_samples),
-        extra={"stereo_mode": stereo_mode, "original_dtype": orig_dtype},
+        duration_seconds=total_samples / fs if fs else None,
+        total_samples=total_samples,
+        extra={
+            "stereo_mode": stereo_mode,
+            "original_dtype": orig_dtype,
+            "loaded_samples": len(complex_samples),
+        },
     )
     if metadata.center_frequency is None:
         metadata.extra["center_frequency_warning"] = (
