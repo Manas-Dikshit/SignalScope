@@ -12,6 +12,7 @@ import type {
   DemoSampleItem,
   AnalysisInsight,
   SimilarSignals,
+  PrioritizedCandidates,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -164,4 +165,8 @@ export const insightsApi = {
 
 export const dashboardApi = {
   stats: () => request<DashboardStats>("/api/dashboard/stats"),
+};
+
+export const candidatesApi = {
+  prioritized: () => request<PrioritizedCandidates>("/api/candidates/prioritized"),
 };
