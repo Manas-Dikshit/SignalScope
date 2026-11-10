@@ -12,6 +12,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 os.environ["CELERY_TASK_ALWAYS_EAGER"] = "1"
+# Eager tasks still write update_state() to the result backend; keep that in
+# process memory so the suite does not require a running Redis.
+os.environ["CELERY_BROKER_URL"] = "memory://"
+os.environ["CELERY_RESULT_BACKEND"] = "cache+memory://"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:////tmp/test.db"
 os.environ["DATA_DIR"] = "/tmp/test_data"
 os.environ["SECRET_KEY"] = "test-secret-key"

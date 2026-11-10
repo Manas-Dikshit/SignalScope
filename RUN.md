@@ -1,14 +1,15 @@
 # RUN.md — Run SignalScope AI (everything)
 
-Verified against the current repo: **API tests (27) ✅, DSP tests (20) ✅,
-frontend tests (20) ✅, frontend build ✅, full Docker stack (postgres + redis +
+Verified against the current repo: **API tests (32) ✅, DSP tests (55) ✅,
+frontend tests (26) ✅, frontend build ✅, full Docker stack (postgres + redis +
 api + worker + web) all healthy ✅.**
 
 Pick ONE of the three modes below. Mode 1 (Docker, all-in-one) is the
 recommended default. Modes 2–3 run each piece in its own terminal so you can
 see/log each service independently.
 
-Prereqs everywhere: **Docker Desktop running** (Mode 1 only), **Python 3.11+**,
+Prereqs everywhere: **Docker Desktop running** (Mode 1 only), **Python 3.11–3.13**
+(native backend only — the pinned NumPy/SciPy versions have no 3.14 wheels),
 **Node 20+**.
 
 ---
@@ -112,21 +113,21 @@ URLs: web http://localhost:3000, API http://localhost:8000/docs.
 Run the three test suites (any order). Each in its own terminal if you want
 them parallel.
 
-### Terminal A — backend API tests (27)
+### Terminal A — backend API tests (32)
 
 ```powershell
 cd services/api
 python -m pytest tests/ -q
 ```
 
-### Terminal B — DSP core tests (20)
+### Terminal B — DSP core tests (55)
 
 ```powershell
 cd services/dsp-worker
 python -m pytest tests/ -q
 ```
 
-### Terminal C — frontend tests + build (20 tests, type-check)
+### Terminal C — frontend tests + build (26 tests, type-check)
 
 ```powershell
 cd apps/web

@@ -234,12 +234,17 @@ async def detect_bursts(
         elif loader == "wav":
             params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
 
+    # Cap the analysis window at the loader so a multi-hundred-MB recording is
+    # never pulled fully into memory.
+    start = project.selected_start_sample or 0
     if loader == "wav":
-        loaded = load_wav(rec.storage_path, **params)
+        loaded = load_wav(rec.storage_path, sample_offset=start, max_samples=200_000, **params)
     elif loader == "raw_iq":
-        loaded = load_raw_iq(rec.storage_path, RawIQFormat(**params))
+        loaded = load_raw_iq(
+            rec.storage_path, RawIQFormat(**params), sample_offset=start, max_samples=200_000
+        )
     elif loader == "sigmf":
-        loaded = load_sigmf(rec.storage_path)
+        loaded = load_sigmf(rec.storage_path, sample_offset=start, max_samples=200_000)
     else:
         raise HTTPException(status_code=422, detail=f"Unknown format: {loader}")
 
@@ -248,17 +253,8 @@ async def detect_bursts(
     if not sr:
         raise HTTPException(status_code=422, detail="Sample rate unknown; cannot detect bursts")
 
-    if project.selected_start_sample is not None and project.selected_end_sample is not None:
-        s = project.selected_start_sample
-        e = project.selected_end_sample
-        samples = samples[s:e]
-    else:
-        s, e = 0, len(samples)
-
-    # Cap the analysis window like deep_analysis so the synchronous request
-    # stays bounded (real recordings can be 100s of MB — a full load OOMs).
-    window_end = min(len(samples), 200_000)
-    samples = samples[:window_end]
+    if project.selected_end_sample is not None:
+        samples = samples[: max(0, project.selected_end_sample - start)]
 
     bursts = dsp_detect_bursts(samples, sr)
     stats = burst_stats(bursts)
@@ -331,20 +327,25 @@ async def deep_analysis(
         elif loader == "wav":
             params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
 
+    # Bound the read at the loader: interactive analysis only ever uses the
+    # first 200k samples of the ROI, so there is no reason to materialize the
+    # whole recording in memory.
+    start = project.selected_start_sample or 0
     if loader == "wav":
-        loaded = load_wav(rec.storage_path, **params)
+        loaded = load_wav(rec.storage_path, sample_offset=start, max_samples=200_000, **params)
     elif loader == "raw_iq":
-        loaded = load_raw_iq(rec.storage_path, RawIQFormat(**params))
+        loaded = load_raw_iq(
+            rec.storage_path, RawIQFormat(**params), sample_offset=start, max_samples=200_000
+        )
     elif loader == "sigmf":
-        loaded = load_sigmf(rec.storage_path)
+        loaded = load_sigmf(rec.storage_path, sample_offset=start, max_samples=200_000)
     else:
         raise HTTPException(status_code=422, detail=f"Unknown format: {loader}")
 
-    start = project.selected_start_sample or 0
-    end = project.selected_end_sample or len(loaded.samples)
-    samples = loaded.samples[start:end]
-    window_end = min(len(samples), 200_000)
-    samples = samples[:window_end]
+    samples = loaded.samples
+    if project.selected_end_sample is not None:
+        samples = samples[: max(0, project.selected_end_sample - start)]
+    window_end = len(samples)
 
     cond = condition_signal(samples, sr, ConditioningConfig(remove_dc_offset=True, normalize=True))
     work = cond.samples

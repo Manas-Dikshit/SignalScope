@@ -24,7 +24,7 @@ Traditional signal analyzers output a single number and call it truth. SignalSco
 
 | Feature | The SignalScope way |
 |---------|-------------------|
-| **Explanable** | Every estimate ships with `source`, `confidence`, and human-readable evidence |
+| **Explainable** | Every estimate ships with `source`, `confidence`, and human-readable evidence |
 | **Offline & private** | 100% local processing — your RF data never leaves your machine |
 | **Multi-format** | WAV, raw I/Q, and SigMF (`-meta` + `-data` pairs) |
 | **End-to-end** | Modulation → symbol rate → bursts → demodulation → de-interleaving → FEC → bits |
@@ -73,7 +73,7 @@ Traditional signal analyzers output a single number and call it truth. SignalSco
 
 ## Architecture
 
-> **Ready the full system design —** [**`ARCHITECTURE.md`**](./ARCHITECTURE.md) contains the complete Mermaid system-design diagram of every layer (frontend, API, Celery worker, Redis, Postgres), the DSP processing pipeline, and the async job lifecycle sequence. Tech-stack badges included.
+> **Read the full system design —** [**`ARCHITECTURE.md`**](./ARCHITECTURE.md) contains the complete Mermaid system-design diagram of every layer (frontend, API, Celery worker, Redis, Postgres), the DSP processing pipeline, and the async job lifecycle sequence. Tech-stack badges included.
 
 ---
 
@@ -83,13 +83,13 @@ Traditional signal analyzers output a single number and call it truth. SignalSco
 
 - [Docker](https://docker.com) + Docker Compose
 - Node.js 18+ (only for frontend hot-reload)
-- Python 3.11+ (only for running tests natively)
+- Python 3.11–3.13 (only for running tests natively; the pinned NumPy/SciPy versions have no Python 3.14 wheels)
 
 ### Quick start (recommended)
 
 ```bash
 # 1. Clone & configure
-git clone <https://github.com/Manas-Dikshit/SignalScope.git> signalscope
+git clone https://github.com/Manas-Dikshit/SignalScope.git signalscope
 cd signalscope
 
 cp .env.example .env                        # then set a strong SECRET_KEY
@@ -168,14 +168,14 @@ Nothing is presented as *exact* when it isn't — the UI color-codes confidence 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/auth/register` · `/login` · `/me` | POST/GET | JWT auth via httpOnly cookie |
-| `/api/uploads` | POST | Upload WAV / raw-IQ / SigMF (validated) |
+| `/api/recordings/upload` | POST | Upload WAV / raw-IQ / SigMF (validated) |
 | `/api/projects` | CRUD | Group recordings into analysis projects |
 | `/api/projects/{id}/estimate-parameters` | POST | Dispatch estimation job → Celery |
 | `/api/projects/{id}/parameters` | GET | Provenance-tracked estimates |
 | `/api/recordings` | CRUD | Recording metadata + preview |
 | `/api/jobs/{id}` | GET | Async job status (`queued → running → completed`) |
 | `/api/dashboard/stats` | GET | Aggregate metrics |
-| `/api/health` | GET | Liveness probe |
+| `/health` | GET | Liveness probe |
 
 Full interactive docs at `/docs` (Swagger UI).
 
