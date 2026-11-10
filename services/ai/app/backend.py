@@ -338,21 +338,35 @@ class TransformersBackend:
                     bnb_4bit_quant_type="nf4",
                     bnb_4bit_use_double_quant=True,
                     bnb_4bit_compute_dtype=torch.bfloat16,
+                    # Gemma 4 E2B is multimodal: the vision/audio encoders stay
+                    # in fp32 and spill to CPU when the quantized core won't fit
+                    # in a 6 GB consumer GPU.
+                    llm_int8_enable_fp32_cpu_offload=True,
                 )
             else:
                 load_kwargs["quantization_config"] = BitsAndBytesConfig(
-                    load_in_8bit=True
+                    load_in_8bit=True,
+                    llm_int8_enable_fp32_cpu_offload=True,
                 )
         else:
             load_kwargs["dtype"] = "auto"
 
         if settings.AI_MAX_GPU_MEMORY:
-            # Cap the accelerator and let accelerate spill the rest to CPU
-            # instead of failing with an out-of-memory error.
+            # Cap the accelerator and let accelerate spill overflow layers
+            # (fp32 vision/audio encoders) to CPU instead of exceeding VRAM.
             load_kwargs["max_memory"] = {
                 0: settings.AI_MAX_GPU_MEMORY,
                 "cpu": "24GiB",
             }
+        else:
+            # Conservative default for consumer GPUs (e.g. RTX 3050 6 GB):
+            # leave room for the quantized core + fp32 multimodal encoders.
+            load_kwargs["max_memory"] = {
+                0: "4GiB",
+                "cpu": "24GiB",
+            }
+        # device_map stays "auto" so accelerate decides placement; do not force
+        # everything onto GPU 0, which creates meta tensors and OOMs.
 
         self._processor = AutoProcessor.from_pretrained(settings.AI_MODEL)
         self._model = AutoModelForMultimodalLM.from_pretrained(
