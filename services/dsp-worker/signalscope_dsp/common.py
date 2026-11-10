@@ -72,6 +72,9 @@ class Recording:
     samples: np.ndarray  # complex64, shape (N,)
     metadata: RecordingMetadata
     source_path: str
+    # Optional simultaneous per-antenna channels 1..M (same time base as
+    # `samples`, which is channel 0). Filled only by multi-antenna loaders.
+    other_channels: tuple[np.ndarray, ...] = ()
 
     def duration_s(self) -> float:
         fs = self.metadata.sample_rate.value
