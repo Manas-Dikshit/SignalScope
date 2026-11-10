@@ -49,7 +49,7 @@ Native setup walkthrough: [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md).
 | Frontend | `cd apps/web && npm test` |
 | TypeScript | `cd apps/web && npx tsc --noEmit` |
 
-Current counts: **69 DSP · 51 API · 19 AI · 26 frontend**. Add or update a test
+Current counts: **74 DSP · 63 API · 22 AI · 29 frontend**. Add or update a test
 with every endpoint, DSP stage, or formatting change. The AI suite must keep
 passing with `AI_ENABLED=false` for the core product.
 

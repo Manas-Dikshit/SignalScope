@@ -1,7 +1,7 @@
 # RUN.md — Run SignalScope AI end to end
 
-SignalScope ships four test suites (**165 tests**): **69 DSP**, **51 API**, **19 AI**,
-and **26 frontend**. The default stack is deterministic and offline; the Gemma 4
+SignalScope ships four test suites (**188 tests**): **74 DSP**, **63 API**, **22 AI**,
+and **29 frontend**. The default stack is deterministic and offline; the Gemma 4
 analyst sidecar is optional.
 
 Pick one of the modes below. **Mode 1 (Docker, all-in-one)** is the recommended

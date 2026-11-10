@@ -28,7 +28,6 @@ def upgrade() -> None:
                 PG_UUID(as_uuid=True),
                 sa.ForeignKey("analysis_projects.id"),
                 nullable=False,
-                unique=True,
             ),
             sa.Column(
                 "recording_id",
@@ -46,13 +45,13 @@ def upgrade() -> None:
         )
 
     index_names = {i["name"] for i in insp.get_indexes("signal_fingerprints")}
-    for name, columns in (
-        ("ix_signal_fingerprints_project_id", ["project_id"]),
-        ("ix_signal_fingerprints_recording_id", ["recording_id"]),
-        ("ix_signal_fingerprints_version", ["version"]),
+    for name, columns, unique in (
+        ("ix_signal_fingerprints_project_id", ["project_id"], True),
+        ("ix_signal_fingerprints_recording_id", ["recording_id"], False),
+        ("ix_signal_fingerprints_version", ["version"], False),
     ):
         if name not in index_names:
-            op.create_index(name, "signal_fingerprints", columns)
+            op.create_index(name, "signal_fingerprints", columns, unique=unique)
 
 
 def downgrade() -> None:
