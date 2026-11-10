@@ -1,14 +1,12 @@
-<div align="center">
-
-<img src="apps/web/public/web-app-manifest-512x512.png" alt="SignalScope AI" width="96" />
-
 # SignalScope AI — Project Description
 
 **An offline, explainable RF signal-analysis workbench for authorized recordings.**
 
 Version 0.1.0 · MIT License · Deterministic DSP core · Optional local Gemma 4 analyst
 
-</div>
+**Repository:** https://github.com/Manas-Dikshit/SignalScope
+
+**Documentation:** [README](https://github.com/Manas-Dikshit/SignalScope/blob/main/README.md) · [Architecture](https://github.com/Manas-Dikshit/SignalScope/blob/main/ARCHITECTURE.md) · [Run guide](https://github.com/Manas-Dikshit/SignalScope/blob/main/RUN.md) · [Local setup](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/LOCAL_SETUP.md) · [Traceability](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/REQUIREMENTS_TRACEABILITY.md)
 
 ---
 
@@ -182,34 +180,28 @@ This makes the entire pipeline demonstrable with no external dataset.
 
 ### 7.1 Asynchronous full analysis
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant B as Browser
-    participant A as FastAPI
-    participant R as Redis
-    participant W as Celery Worker
-    participant P as PostgreSQL
-    participant V as upload volume
-
-    B->>A: POST /api/projects/{id}/estimate-parameters
-    A->>R: enqueue estimate_parameters
-    A-->>B: 202 { job_id, status: "queued" }
-    R->>W: deliver task
-    W->>V: read recording
-    W->>W: run signalscope_dsp pipeline
-    W->>P: upsert parameter_estimates (+ evidence)
-    W-->>R: mark SUCCESS
-    loop every 2 s
-        B->>A: GET /api/jobs/{id}
-        A-->>B: running / completed
-    end
-    B->>A: GET /api/projects/{id}/parameters
-    A-->>B: estimates with source, confidence, evidence, alternatives
+```text
+ 1. Browser  -> FastAPI : POST /api/projects/{id}/estimate-parameters
+ 2. FastAPI  -> Redis   : enqueue estimate_parameters
+ 3. FastAPI  -> Browser : 202 { job_id, status: "queued" }
+ 4. Redis    -> Worker  : deliver task
+ 5. Worker   -> Volume  : read recording
+ 6. Worker   -> Worker  : run signalscope_dsp pipeline
+ 7. Worker   -> Postgres: upsert parameter_estimates (+ evidence)
+ 8. Worker   -> Redis   : mark SUCCESS
+ 9. Browser  -> FastAPI : GET /api/jobs/{id}  (poll every 2 s)
+10. FastAPI  -> Browser : running / completed
+11. Browser  -> FastAPI : GET /api/projects/{id}/parameters
+12. FastAPI  -> Browser : estimates with source, confidence, evidence,
+                          alternatives
 ```
 
-The UI polls job status, refetches when the job completes, and renders the
-persisted estimates. No analysis result is held only in memory.
+**Read as:** the browser asks FastAPI for an estimate, FastAPI enqueues a Celery
+tasks through Redis and returns `202` with a job id. The worker reads the
+recording, runs the DSP pipeline, persists estimates and evidence in
+PostgreSQL, then marks the job successful. The browser polls the job, refetches
+when it completes, and renders the persisted estimates. No analysis result is
+held only in memory.
 
 ### 7.2 Interactive workspace
 
@@ -294,17 +286,28 @@ classification with evidence — not a direction-finding product.
 The AI layer is **off by default** (`AI_ENABLED=false`). The deterministic
 product is complete without it.
 
-```mermaid
-flowchart LR
-    E["Stored DSP evidence"] --> B["EvidenceBundle"]
-    B --> I["Rendered PNGs<br/>PSD · waterfall · constellation · M-th power"]
-    B --> S["Gemma 4 sidecar"]
-    I --> S
-    S --> T["Allowlisted DSP tools"]
-    T --> A["Private API route"]
-    A --> S
-    S --> V["Schema + citation + numeric validation"]
-    V --> R["Cited brief<br/>source = ai_hypothesis"]
+```text
+Stored DSP evidence
+        |
+        v
+  EvidenceBundle
+    |       |
+    |       +--> Rendered PNGs (PSD, waterfall, constellation, M-th power)
+    |                     |
+    v                     v
+Gemma 4 sidecar <---------+
+    |
+    +--> Allowlisted DSP tools
+    |         |
+    |         v
+    |    Private API route (X-Internal-Token)
+    |         |
+    |         +--> back to the sidecar
+    |
+    +--> Schema + citation + numeric validation
+                |
+                v
+      Cited brief, source = ai_hypothesis
 ```
 
 ### 10.1 What it does
@@ -346,57 +349,42 @@ Other local runtimes can be added behind the same `InsightBackend` protocol.
 
 ## 11. System architecture
 
-```mermaid
-flowchart TB
-    subgraph Client
-        U["Analyst browser"]
-    end
-
-    subgraph Frontend["Next.js 14"]
-        UI["Dashboard · Recording library · Workspace"]
-        Q["TanStack Query<br/>job polling + cache"]
-    end
-
-    subgraph Backend["FastAPI"]
-        API["REST API<br/>auth · uploads · projects · jobs"]
-        TOOLS["Private DSP tools<br/>X-Internal-Token"]
-        IMG["Evidence image renderer"]
-    end
-
-    subgraph Compute["Celery worker"]
-        TASK["estimate_parameters_task"]
-        INS["generate_insight_task"]
-        DSP["signalscope_dsp<br/>loaders · DSP stages · FEC · provenance"]
-    end
-
-    subgraph AI["Optional Gemma 4 sidecar"]
-        MODEL["fake or transformers backend"]
-        LOOP["Agent loop + validation"]
-    end
-
-    subgraph Data
-        PG[("PostgreSQL 16")]
-        RD[("Redis 7")]
-        VOL[("uploads volume")]
-    end
-
-    U --> UI --> API
-    API -->|202 + job id| Q
-    API --> RD
-    RD --> TASK
-    TASK --> DSP
-    DSP --> VOL
-    TASK --> PG
-    UI -->|poll /jobs/{id}| API
-    API --> PG
-    API -.-> INS
-    INS --> IMG
-    INS --> MODEL
-    MODEL --> LOOP
-    LOOP --> TOOLS
-    TOOLS --> API
-    INS --> PG
+```text
+Client
+  Browser: Next.js 14 App Router UI
+    Dashboard - Recording library - Analysis workspace
+    TanStack Query: job polling + cache
+        |
+        | REST (JWT)
+        v
+FastAPI
+  REST API: auth - uploads - recordings - projects - jobs
+  Private DSP tools route (X-Internal-Token)
+  Evidence image renderer
+        |
+        +--> Redis 7: Celery broker + result backend
+        |         |
+        |         v
+        |    Celery worker
+        |      estimate_parameters_task
+        |      generate_insight_task
+        |      signalscope_dsp: loaders - DSP stages - FEC - provenance
+        |         |
+        |         +--> uploads volume: WAV / raw I/Q / SigMF recordings
+        |
+        +--> PostgreSQL 16: projects - recordings - jobs - estimates -
+        |      evidence - insights
+        |
+        +--> Optional Gemma 4 sidecar
+               fake or transformers backend
+               agent loop + validation
 ```
+
+The browser talks only to FastAPI. FastAPI hands long-running work to Celery
+through Redis, and the worker is the only process that reads recordings from the
+uploads volume and runs the DSP pipeline. PostgreSQL is the single source of
+truth for results. The Gemma 4 sidecar is optional and reached only through
+FastAPI's token-gated private route.
 
 ### 11.1 Components
 
@@ -467,6 +455,35 @@ recording, job, and insight route. The private DSP tool route is disabled when
 - **InsightPanel** — AI brief with `ai_hypothesis` badge, citations, tool trace,
   and explicit error/fallback states.
 - **App shell** — web manifest, favicons, responsive layout.
+
+### 13.1 Screenshots
+
+Images use absolute URLs so they render outside GitHub. Each caption also links
+to the file in the repository, in case the renderer blocks remote images.
+
+**Dashboard**
+
+![Dashboard](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/screenshots/after/dashboard.1440.after.png)
+
+[Open dashboard screenshot](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/screenshots/after/dashboard.1440.after.png)
+
+**Recording library**
+
+![Recording library](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/screenshots/after/recordings.1440.after.png)
+
+[Open recording library screenshot](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/screenshots/after/recordings.1440.after.png)
+
+**Analysis workspace**
+
+![Analysis workspace](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/screenshots/after/workspace.1440.after.png)
+
+[Open analysis workspace screenshot](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/screenshots/after/workspace.1440.after.png)
+
+**Landing page**
+
+![Landing page](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/screenshots/after/landing.1440.after.png)
+
+[Open landing page screenshot](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/screenshots/after/landing.1440.after.png)
 
 ---
 
@@ -604,7 +621,7 @@ For the optional AI analyst:
 docker compose --profile ai up --build
 ```
 
-See [`RUN.md`](./RUN.md) and [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) for
+See [`RUN.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/RUN.md) and [`docs/LOCAL_SETUP.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/LOCAL_SETUP.md) for
 native setup, configuration, and troubleshooting.
 
 ---
@@ -613,26 +630,22 @@ native setup, configuration, and troubleshooting.
 
 | Document | Purpose |
 |---|---|
-| [`README.md`](./README.md) | Overview, screenshots, quick start, API, testing |
-| [`RUN.md`](./RUN.md) | Run modes, test suites, smoke test, troubleshooting |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design, layers, sequence flow, deployment |
-| [`detailedarch.md`](./detailedarch.md) | Low-level topology, stage contracts, AI contract |
-| [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) | Local Docker/native setup and configuration |
-| [`docs/REQUIREMENTS_TRACEABILITY.md`](./docs/REQUIREMENTS_TRACEABILITY.md) | Requirement → implementation → test mapping |
-| [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](./docs/GEMMA4_IMPLEMENTATION_PLAN.md) | Gemma 4 phases, contracts, guardrails, demo script |
-| [`docs/DESIGN_NOTES.md`](./docs/DESIGN_NOTES.md) | UI visual-depth rationale |
-| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Layout, conventions, tests, PR checklist |
-| [`REFERENCES.md`](./REFERENCES.md) | Formats, DSP, FEC, interferometry, AI references |
+| [`README.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/README.md) | Overview, screenshots, quick start, API, testing |
+| [`RUN.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/RUN.md) | Run modes, test suites, smoke test, troubleshooting |
+| [`ARCHITECTURE.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/ARCHITECTURE.md) | System design, layers, sequence flow, deployment |
+| [`detailedarch.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/detailedarch.md) | Low-level topology, stage contracts, AI contract |
+| [`docs/LOCAL_SETUP.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/LOCAL_SETUP.md) | Local Docker/native setup and configuration |
+| [`docs/REQUIREMENTS_TRACEABILITY.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/REQUIREMENTS_TRACEABILITY.md) | Requirement → implementation → test mapping |
+| [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/GEMMA4_IMPLEMENTATION_PLAN.md) | Gemma 4 phases, contracts, guardrails, demo script |
+| [`docs/DESIGN_NOTES.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/DESIGN_NOTES.md) | UI visual-depth rationale |
+| [`CONTRIBUTING.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/CONTRIBUTING.md) | Layout, conventions, tests, PR checklist |
+| [`REFERENCES.md`](https://github.com/Manas-Dikshit/SignalScope/blob/main/REFERENCES.md) | Formats, DSP, FEC, interferometry, AI references |
 
 ---
 
 ## 22. License
 
-MIT — see [`LICENSE`](./LICENSE). Gemma 4 model weights are distributed under
+MIT — see [`LICENSE`](https://github.com/Manas-Dikshit/SignalScope/blob/main/LICENSE). Gemma 4 model weights are distributed under
 the Apache-2.0 license by Google.
 
-<div align="center">
-
 **Every number is an estimate. Every estimate has a source, a confidence, and evidence you can read.**
-
-</div>
