@@ -6,6 +6,7 @@ import { dashboardApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard } from "@/components/ConfidenceIndicator";
 import SignalBackdrop from "@/components/SignalBackdrop";
+import { DemoSamplesSection } from "@/components/DemoSamplesSection";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import Link from "next/link";
 import { ArrowRight, FolderOpen, Radio } from "lucide-react";
@@ -216,6 +217,11 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Demo Signals Quick Start */}
+      <div className="reveal reveal-delay-3">
+        <DemoSamplesSection />
+      </div>
     </div>
   );
 }
