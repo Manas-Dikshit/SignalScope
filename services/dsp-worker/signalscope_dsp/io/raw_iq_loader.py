@@ -81,12 +81,18 @@ def load_raw_iq(
 
     warnings: list[str] = []
 
+    if fmt.layout != "interleaved" and fmt.channels != 1:
+        raise ValueError("Multi-antenna loading is only implemented for the 'interleaved' layout.")
+    n_ch = max(1, fmt.channels)
+    frame = 2 * n_ch  # complex scalars per frame: CH0-I, CH0-Q, CH1-I, CH1-Q, ...
+
     if fmt.layout == "interleaved":
-        if total_scalars % 2 != 0:
-            warnings.append("Odd number of samples for interleaved I/Q; trailing sample dropped.")
-        total_samples = total_scalars // 2
-        scalar_offset = sample_offset * 2
-        count = -1 if max_samples is None else max_samples * 2
+        if total_scalars % frame != 0:
+            warnings.append(f"Recording length is not a whole number of {n_ch}-channel frames; "
+                            "trailing partial frame dropped.")
+        total_samples = total_scalars // frame
+        scalar_offset = sample_offset * frame
+        count = -1 if max_samples is None else max_samples * frame
     elif fmt.layout == "separate_iq":
         half = total_scalars // 2
         total_samples = half
