@@ -52,6 +52,7 @@ Most signal analyzers print one number and call it truth. SignalScope treats eve
 | **FEC lab** | Hard-decision Viterbi (rate-1/2 convolutional), Reed–Solomon with erasures, LDPC belief propagation, and concatenated RS + convolutional decoding — each reporting corrected symbols, stage failures, and CRC validity. |
 | **Demo signal lab** | One-click QPSK, 2-FSK, 16-QAM, BPSK burst, and 8-PSK recordings in the dashboard and recording library. |
 | **Optional Gemma 4 analyst** | Cited natural-language brief, conflict/anomaly detection, allowlisted DSP tool calls, and rendered PSD/waterfall/constellation/M-th-power evidence images. AI output is always labelled `ai_hypothesis`. |
+| **Celestial candidate queue** | Prioritizes analysed signals by **novelty** (fingerprint gallery distance), **repeatability** (re-detections within threshold), **astrophysical plausibility** (narrowband / slow-drift / structured / SNR checklist), and **follow-up feasibility** (re-pointable frequency, re-detectable SNR, usable duration, modulation hypothesis). Transparent weighted composite with expandable per-check reasons. |
 | **App-shell UI** | Web manifest, favicons, responsive layouts, and a 375 px proof-panel bottom sheet. |
 
 ---
@@ -280,6 +281,7 @@ Full interactive documentation is available at **`/docs`** (Swagger UI).
 | AI insights | `/api/projects/{id}/insights` | POST (queue) · GET (latest) |
 | Jobs | `/api/jobs/{id}` | GET |
 | Dashboard | `/api/dashboard/stats` | GET |
+| Prioritization | `/api/candidates/prioritized` | GET |
 | Internal tools | `/internal/dsp-tools/{tool_name}` | POST + `X-Internal-Token` |
 | Health | `/health` | GET |
 
@@ -293,12 +295,12 @@ All four suites:
 
 | Suite | Command | Tests |
 |---|---|---:|
-| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | **69** |
-| API | `cd services/api && python -m pytest tests/ -q` | **51** |
-| AI sidecar | `cd services/ai && python -m pytest tests/ -q` | **19** |
-| Frontend | `cd apps/web && npm test` | **26** |
+| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | **74** |
+| API | `cd services/api && python -m pytest tests/ -q` | **63** |
+| AI sidecar | `cd services/ai && python -m pytest tests/ -q` | **22** |
+| Frontend | `cd apps/web && npm test` | **29** |
 
-Coverage includes WAV/raw-IQ/SigMF loading, bounded windows, dual-antenna frames, interferometric origin verdicts, modulation/demodulation BER round trips, symbol-rate estimation, de-interleaving, convolutional/Reed–Solomon/LDPC/concatenated FEC, CRC, proof spectra, kHz–GHz band coverage, auth, uploads, projects, jobs, cross-user isolation, demo samples, evidence images, AI validation/tool-loop behavior, provenance badges, and formatting utilities.
+Coverage includes WAV/raw-IQ/SigMF loading, bounded windows, dual-antenna frames, interferometric origin verdicts, modulation/demodulation BER round trips, symbol-rate estimation, de-interleaving, convolutional/Reed–Solomon/LDPC/concatenated FEC, CRC, proof spectra, kHz–GHz band coverage, auth, uploads, projects, jobs, cross-user isolation, demo samples, evidence images, AI validation/tool-loop behavior, celestial candidate prioritization, provenance badges, and formatting utilities.
 
 Run the API suite inside Docker:
 
@@ -357,6 +359,7 @@ SignalScope/
 - [x] Demo signal library and app-shell UI
 - [x] Gemma 4 cited brief, agent tool loop, and multimodal evidence images
 - [x] Rare-signal gallery / fingerprint similarity search
+- [x] Scientific candidate prioritization for celestial signals (novelty, repeatability, astrophysical plausibility, follow-up feasibility)
 - [ ] QLoRA fine-tuning on synthetic RF evidence pairs
 - [ ] Closed-loop carrier and timing recovery (Costas / PLL / Gardner)
 - [ ] Neural-network modulation classifier
@@ -375,6 +378,7 @@ SignalScope/
 | [`detailedarch.md`](./detailedarch.md) | Low-level service, port, data-store, and DSP-stage view |
 | [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) | Local Docker/native setup and configuration reference |
 | [`docs/REQUIREMENTS_TRACEABILITY.md`](./docs/REQUIREMENTS_TRACEABILITY.md) | Requirement → implementation → test mapping |
+| [`opensourceAI.md`](./opensourceAI.md) | Open-source/open-weight AI integration: model, harness, guardrails, challenge-rules mapping |
 | [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](./docs/GEMMA4_IMPLEMENTATION_PLAN.md) | Gemma 4 phases, contracts, guardrails, demo script |
 | [`MODEL_CARD.md`](./MODEL_CARD.md) | Gemma 4 E4B model card, anti-hallucination architecture, and safety guardrails |
 | [`skills/signal-triage/SKILL.md`](./skills/signal-triage/SKILL.md) | Agent Skill specification for autonomous RF signal triage |

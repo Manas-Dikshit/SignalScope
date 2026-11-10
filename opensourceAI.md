@@ -174,7 +174,7 @@ Memory guidance and sizing: [docs/GEMMA4_IMPLEMENTATION_PLAN.md](docs/GEMMA4_IMP
 On AI failure the task records a `failed` insight with the reason — nothing
 else in the product changes.
 
-Tests: `cd services/ai && python -m pytest tests/ -q` (19 tests; the suite runs
+Tests: `cd services/ai && python -m pytest tests/ -q` (22 tests; the suite runs
 against the deterministic backend so CI never downloads weights).
 
 ## 8. Files that make this up

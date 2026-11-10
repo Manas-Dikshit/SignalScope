@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MetricCard } from "@/components/ConfidenceIndicator";
 import SignalBackdrop from "@/components/SignalBackdrop";
 import { DemoSamplesSection } from "@/components/DemoSamplesSection";
+import { CandidateQueuePanel } from "@/components/CandidateQueuePanel";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import Link from "next/link";
 import { ArrowRight, FolderOpen, Radio, Upload } from "lucide-react";
@@ -135,6 +136,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Scientific candidate queue */}
+      <CandidateQueuePanel />
 
       {/* Recent work */}
       <div className="grid gap-6 xl:grid-cols-2">

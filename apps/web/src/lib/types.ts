@@ -317,6 +317,28 @@ export interface SimilarSignals {
   evidence: string[];
 }
 
+export interface CandidatePriority {
+  project_id: string;
+  project_name: string;
+  created_at: string | null;
+  composite: number;
+  novelty: number;
+  repeatability: number;
+  plausibility: number;
+  feasibility: number;
+  repeats: number;
+  nearest_distance: number | null;
+  rare_signal: boolean | null;
+  reasons: string[];
+}
+
+export interface PrioritizedCandidates {
+  threshold: number;
+  candidates: CandidatePriority[];
+  method: string;
+  evidence: string[];
+}
+
 export interface UploadPayload {
   file: File;
   format: "wav" | "raw_iq" | "sigmf";
