@@ -40,12 +40,13 @@ export const CHART_TRACE_COLORS = {
 } as const;
 
 export const CHART_WATERFALL_COLORSCALE: [number, string][] = [
-  [0, "#0B0F14"],
-  [0.15, "#164e63"],
-  [0.4, "#0e7490"],
-  [0.65, "#22d3ee"],
-  [0.85, "#a5f3fc"],
-  [1.0, "#ecfeff"],
+  [0.0, "#0b0f14"], // noise floor: near-black
+  [0.15, "#1e3a8a"], // deep blue: weak signal
+  [0.35, "#2563eb"], // blue
+  [0.5, "#22c55e"], // green: moderate signal
+  [0.7, "#facc15"], // yellow: strong
+  [0.85, "#f97316"], // orange
+  [1.0, "#ef4444"], // red: peak power
 ];
 
 export const MOTION = {
