@@ -1,3 +1,5 @@
+![SignalScope AI logo](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/apps/web/public/web-app-manifest-512x512.png)
+
 # SignalScope AI
 
 **An offline, explainable RF signal-analysis workbench for authorized recordings.**

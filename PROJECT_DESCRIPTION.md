@@ -1,14 +1,10 @@
-<div align="center">
-
-<img src="https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/apps/web/public/web-app-manifest-512x512.png" alt="SignalScope AI" width="96" />
+![SignalScope AI logo](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/apps/web/public/web-app-manifest-512x512.png)
 
 # SignalScope AI — Project Description
 
 **An offline, explainable RF signal-analysis workbench for authorized recordings.**
 
 Version 0.1.0 · MIT License · Deterministic DSP core · Optional local Gemma 4 analyst
-
-</div>
 
 **Repository:** https://github.com/Manas-Dikshit/SignalScope
 
