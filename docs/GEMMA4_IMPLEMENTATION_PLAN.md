@@ -1008,16 +1008,16 @@ Acceptance:
 
 If targeting Open Innovation 2 as well:
 
-1. Keep the repo public under MIT.
-2. Document model name, version, quantization, and Apache-2.0 license in README.
-3. Publish the agent loop + tool registry + validation layer as a reusable **model harness**.
-4. Package a `signal-triage` **Agent Skill** following the Agent Skill Open Standard:
+1. [x] Keep the repo public under MIT.
+2. [x] Document model name, version, quantization, and Apache-2.0 license in README.
+3. [x] Publish the agent loop + tool registry + validation layer as a reusable **model harness** (`services/ai`).
+4. [x] Package a `signal-triage` **Agent Skill** following the Agent Skill Open Standard (`skills/signal-triage/SKILL.md`).
    - `SKILL.md`
-   - JSON schemas
-   - tool descriptions
-   - example evidence bundles
+   - JSON schemas (`schemas/evidence_bundle.json`, `schemas/insight_response.json`)
+   - tool descriptions & workflow diagram
+   - example evidence bundles (`examples/evidence_bundle_example.json`)
    - safety rules
-5. Add a `MODEL_CARD.md` describing intended use, limits, and evaluation.
+5. [x] Add a `MODEL_CARD.md` describing intended use, limits, anti-hallucination protocols, and evaluation.
 
 ---
 
