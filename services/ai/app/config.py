@@ -20,5 +20,11 @@ class AISettings(BaseSettings):
     AI_MAX_NEW_TOKENS: int = 1024
     AI_PROMPT_VERSION: str = "2026-11-01"
 
+    # Private API route that executes allowlisted DSP tools. The AI service never
+    # touches the database or recording volume directly.
+    API_INTERNAL_URL: str = "http://api:8000"
+    INTERNAL_API_TOKEN: str = ""
+    AI_TOOL_TIMEOUT_SECONDS: float = 30.0
+
 
 settings = AISettings()

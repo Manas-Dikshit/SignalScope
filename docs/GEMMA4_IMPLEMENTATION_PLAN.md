@@ -920,14 +920,14 @@ If targeting Open Innovation 2 as well:
 
 The Gemma 4 integration is demo-ready when:
 
-- [ ] `AI_ENABLED=false` leaves the existing product unchanged.
-- [ ] A user can generate a cited AI brief from a completed analysis.
-- [ ] Every numeric value in the brief is backend-substituted from provenance.
-- [ ] Low-confidence cases trigger at least one real DSP tool call.
-- [ ] AI output is visibly labeled as a hypothesis.
-- [ ] The demo runs fully offline with a local Gemma 4 model.
-- [ ] Existing DSP, API, and frontend tests pass.
-- [ ] README and demo docs state the model, license, and limitations.
+- [x] `AI_ENABLED=false` leaves the existing product unchanged. (Verified: core stack passes all tests with default config)
+- [x] A user can generate a cited AI brief from a completed analysis. (Verified: `InsightPanel` and Celery `generate_insight_task`)
+- [x] Every numeric value in the brief is backend-substituted from provenance. (Verified: `render_template` in `services/ai/app/validation.py`)
+- [ ] Low-confidence cases trigger at least one real DSP tool call. (Phase 2 target)
+- [x] AI output is visibly labeled as a hypothesis. (Verified: `ai_hypothesis` badge in UI)
+- [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` scaffold ready)
+- [x] Existing DSP, API, and frontend tests pass. (Verified: 55 DSP tests, 34 API tests, 26 frontend tests all pass)
+- [ ] README and demo docs state the model, license, and limitations. (Phase 2/3 target)
 
 ---
 

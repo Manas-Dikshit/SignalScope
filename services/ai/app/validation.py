@@ -4,6 +4,7 @@ import re
 from typing import Any
 
 from .schemas import InsightResponse
+from .tools import ALLOWED_TOOLS
 
 _PLACEHOLDER = re.compile(r"\{\{estimate:([A-Za-z0-9_]+)\}\}")
 
@@ -62,8 +63,23 @@ def render_template(template: str, evidence: dict[str, Any]) -> str:
     return _PLACEHOLDER.sub(repl, template).strip()
 
 
-def validate_insight(payload: dict[str, Any], evidence: dict[str, Any]) -> InsightResponse:
-    """Validate shape, citations, and placeholder references.
+def validate_tool_trace(trace: list[dict[str, Any]]) -> None:
+    """Every executed tool must be on the allowlist (defence in depth)."""
+
+    for entry in trace:
+        name = entry.get("tool")
+        if not name and isinstance(entry.get("call"), dict):
+            name = entry["call"].get("name")
+        if name not in ALLOWED_TOOLS:
+            raise ValueError(f"tool trace contains non-allowlisted tool: {name or '<missing>'}")
+
+
+def validate_insight(
+    payload: dict[str, Any],
+    evidence: dict[str, Any],
+    tool_trace: list[dict[str, Any]] | None = None,
+) -> InsightResponse:
+    """Validate shape, citations, placeholders, and tool usage.
 
     Raises ``ValueError`` on a dishonest or malformed response so the caller can
     retry or fall back to a deterministic brief.
@@ -72,20 +88,27 @@ def validate_insight(payload: dict[str, Any], evidence: dict[str, Any]) -> Insig
     response = InsightResponse.model_validate(payload)
     known = evidence_estimate_names(evidence)
 
-    for match in _PLACEHOLDER.finditer(response.summary_template):
-        name = match.group(1)
-        if name not in known:
-            raise ValueError(f"summary_template references unknown evidence: {name}")
+    # When there is no evidence at all, the honest brief is "run estimation
+    # first" with no citations. Skip citation checks only in that case.
+    if known:
+        for match in _PLACEHOLDER.finditer(response.summary_template):
+            name = match.group(1)
+            if name not in known:
+                raise ValueError(f"summary_template references unknown evidence: {name}")
 
-    if not response.citations:
-        raise ValueError("insight has no citations")
+        if not response.citations:
+            raise ValueError("insight has no citations")
 
-    for ref in response.citations:
-        if ref not in known:
-            raise ValueError(f"citation references unknown evidence: {ref}")
+        for ref in response.citations:
+            if ref not in known:
+                raise ValueError(f"citation references unknown evidence: {ref}")
 
-    for ref in response.hypothesis.evidence_refs:
-        if ref not in known:
-            raise ValueError(f"hypothesis references unknown evidence: {ref}")
+        for ref in response.hypothesis.evidence_refs:
+            if ref not in known:
+                raise ValueError(f"hypothesis references unknown evidence: {ref}")
+
+    if tool_trace is not None:
+        validate_tool_trace(tool_trace)
+        response.tool_trace = tool_trace
 
     return response

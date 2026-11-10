@@ -122,8 +122,23 @@ with environment variables:
 | `MAX_UPLOAD_BYTES` | `209715200` | Upload size cap (200 MB) |
 | `SECRET_KEY` | `change-me...` | JWT signing **must be overridden** |
 | `CORS_ORIGINS` | `http://localhost:3000` | Allowed frontend origins |
+| `AI_ENABLED` | `false` | Enable/disable Gemma 4 sidecar integration |
+| `AI_SERVICE_URL` | `http://ai:8100` | URL of the local Gemma 4 AI service |
+| `AI_MODEL` | `google/gemma-4-E4B-it` | Target Gemma 4 model identifier |
+| `AI_BACKEND` | `fake` | Backend type (`fake` or `transformers`) |
 
 Frontend: `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`).
+
+## Optional Local Gemma 4 AI Service
+
+To run the local Gemma 4 AI analyst sidecar alongside the main stack:
+
+```bash
+# Start full stack including the local AI service
+docker compose --profile ai up -d --build
+```
+
+The AI service starts at `http://localhost:8100` (`/health` reports status and active backend). In the Web UI, completed projects will show the **Gemma 4 Analyst Brief** panel (`InsightPanel`) allowing operators to generate cited, provenance-checked natural language briefs.
 
 ## Verification
 

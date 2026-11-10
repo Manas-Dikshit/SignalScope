@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     AI_TIMEOUT_SECONDS: float = 120.0
     AI_PROMPT_VERSION: str = "2026-11-01"
 
+    # Shared secret for the private AI -> DSP tool route. Empty disables the
+    # route, so an accidentally exposed API cannot run analysis for anyone.
+    INTERNAL_API_TOKEN: str = ""
+
     # `CORS_ORIGINS` is a string env var (comma-separated or JSON array).
     # Kept as `str` so pydantic-settings doesn't force JSON decoding of
     # complex-typed env vars across versions.
