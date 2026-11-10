@@ -302,6 +302,7 @@ async def deep_analysis(
     from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
     from signalscope_dsp.modulation.classifier import mth_power_spectrum
     from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
+    from signalscope_dsp.interferometry import interferometric_origin
     from signalscope_dsp.interleaving import (
         block_deinterleave, convolutional_deinterleave, diagonal_deinterleave,
         score_deinterleave_candidate, run_length_histogram,
@@ -362,6 +363,16 @@ async def deep_analysis(
     wf_db = wf_db[np.ix_(freq_idx, time_idx)]
 
     feats = extract_spectral_features(work, sr)
+
+    from signalscope_dsp.preprocessing import ConditioningConfig
+    _inter_cfg = ConditioningConfig(remove_dc_offset=True, normalize=True)
+    _inter_other = [
+        condition_signal(a[: len(work)], sr, _inter_cfg).samples for a in loaded.other_channels
+    ]
+    inter_est = interferometric_origin(
+        [work, *_inter_other], sr,
+        baseline_m=baseline_m if isinstance(baseline_m, (int, float)) else None,
+    )
     features = {
         f.name: {"value": f.value, "unit": f.unit, "source": f.source.value, "confidence": f.confidence,
                  "evidence": f.evidence, "warnings": f.warnings}
