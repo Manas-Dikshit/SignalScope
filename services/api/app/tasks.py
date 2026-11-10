@@ -68,6 +68,7 @@ def estimate_parameters_task(self, project_id_str: str):
 
         loader = rec.file_format
         params: dict = {}
+        baseline_m = None
         if meta and meta.raw_metadata_json:
             if loader == "raw_iq":
                 params = {
