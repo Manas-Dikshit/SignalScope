@@ -12,7 +12,7 @@
 
 | Container | Tech | Port | Role |
 |-----------|------|------|------|
-| `web` | Next.js 14 · React 18 · TypeScript 5 · Tailwind · shadcn/ui | `3000` | SPA + SSR shell, TanStack Query polling, Plotly visualizations, PWA manifest |
+| `web` | Next.js 14 · React 18 · TypeScript 5 · Tailwind · shadcn/ui | `3000` | SPA + SSR shell, TanStack Query polling, Plotly visualizations, web manifest |
 | `api` | FastAPI 0.115 · Pydantic v2 · SQLAlchemy 2.0 async | `8000` | REST gateway: auth, uploads, recordings, projects, jobs, insights, dashboard |
 | `worker` | Celery 5.5 · `signalscope_dsp` (editable) | — | Background executor for DSP and insight tasks |
 | `ai` *(optional)* | FastAPI · Gemma 4 | `8100` | Cited analyst brief, allowlisted DSP tools, evidence-image validation |

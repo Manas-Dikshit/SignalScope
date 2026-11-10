@@ -125,7 +125,7 @@ flowchart TB
 - TanStack Query owns server state. Parameter jobs poll every 2 s and insight jobs every 1.5 s while `queued`/`running`; results are invalidated when the job flips to `completed`.
 - Plotly renders waveform, I/Q scatter, PSD, waterfall, constellation, proof spectra, and ranked candidate bars.
 - `ProofPanel` drills into evidence inline on desktop and as a bottom sheet at ≤375 px.
-- The UI is installable (web manifest + icons) and responsive.
+- The UI ships a web manifest and icons, and is responsive.
 
 ### 2. Application layer (FastAPI)
 

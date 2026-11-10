@@ -52,7 +52,7 @@ Most signal analyzers print one number and call it truth. SignalScope treats eve
 | **FEC lab** | Hard-decision Viterbi (rate-1/2 convolutional), Reed–Solomon with erasures, LDPC belief propagation, and concatenated RS + convolutional decoding — each reporting corrected symbols, stage failures, and CRC validity. |
 | **Demo signal lab** | One-click QPSK, 2-FSK, 16-QAM, BPSK burst, and 8-PSK recordings in the dashboard and recording library. |
 | **Optional Gemma 4 analyst** | Cited natural-language brief, conflict/anomaly detection, allowlisted DSP tool calls, and rendered PSD/waterfall/constellation/M-th-power evidence images. AI output is always labelled `ai_hypothesis`. |
-| **PWA-ready UI** | Installable Next.js app with manifest, favicons, responsive layouts, and a 375 px proof-panel bottom sheet. |
+| **App-shell UI** | Web manifest, favicons, responsive layouts, and a 375 px proof-panel bottom sheet. |
 
 ---
 
@@ -354,7 +354,7 @@ SignalScope/
 - [x] Convolutional, Reed–Solomon, LDPC, and concatenated FEC
 - [x] Burst detection, de-interleaving candidates, bit correlation
 - [x] Interferometric origin discrimination from dual-antenna IQ
-- [x] Demo signal library and PWA-ready UI
+- [x] Demo signal library and app-shell UI
 - [x] Gemma 4 cited brief, agent tool loop, and multimodal evidence images
 - [ ] Rare-signal gallery / fingerprint similarity search
 - [ ] QLoRA fine-tuning on synthetic RF evidence pairs
@@ -369,6 +369,7 @@ SignalScope/
 
 | Document | What it covers |
 |---|---|
+| [`PROJECT_DESCRIPTION.md`](./PROJECT_DESCRIPTION.md) | Full project narrative: problem, capabilities, architecture, AI, data model, testing, ethics |
 | [`RUN.md`](./RUN.md) | Run modes (Docker/native/tests/AI), smoke test, troubleshooting |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design, layers, sequence flow, deployment topology |
 | [`detailedarch.md`](./detailedarch.md) | Low-level service, port, data-store, and DSP-stage view |
