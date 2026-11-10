@@ -96,6 +96,53 @@ def estimate_snr_db(samples: np.ndarray, sample_rate: float, fft_size: int = 409
     return peak_db - noise_floor_db
 
 
+def estimate_frequency_drift_rate(samples: np.ndarray, sample_rate: float, fft_size: int = 1024) -> Estimate:
+    """Frequency drift rate of the dominant signal component, in Hz/s.
+
+    Tracks the per-frame argmax frequency of the STFT (the frequency ridge) and
+    fits a line over time; the slope is the drift rate. Confidence is tied to
+    the linearity (R^2) of the ridge so noise or wideband signals get an honest
+    low-confidence answer instead of a reassuring number."""
+    name = "frequency_drift_rate"
+    if len(samples) < 8 or sample_rate <= 0:
+        return Estimate(name, None, "Hz/s", Source.UNKNOWN)
+
+    nperseg = min(fft_size, len(samples))
+    freqs, times, sxx = sp_signal.spectrogram(
+        samples, fs=sample_rate, window="hann", nperseg=nperseg, noverlap=nperseg * 3 // 4,
+        return_onesided=False, mode="magnitude",
+    )
+    freqs = np.fft.fftshift(freqs)
+    sxx = np.fft.fftshift(sxx, axes=0)
+    if sxx.shape[1] < 2:
+        return Estimate(name, None, "Hz/s", Source.UNKNOWN,
+                        warnings=["Too few frames in the recording for drift estimation."])
+
+    ridge = freqs[np.argmax(sxx, axis=0)]
+    t = times - times[0]
+    if float(np.var(t)) <= 0:
+        return Estimate(name, None, "Hz/s", Source.UNKNOWN,
+                        warnings=["Only one distinct frame; drift rate undefined."])
+
+    t_c = t - t.mean()
+    r_c = ridge - ridge.mean()
+    slope = float(np.dot(t_c, r_c) / np.dot(t_c, t_c))
+    residual = float(np.sum((r_c - slope * t_c) ** 2))
+    total = float(np.sum(r_c ** 2))
+    r2 = 1.0 - residual / total if total > 0 else 1.0
+
+    warnings = []
+    if r2 < 0.5:
+        warnings.append(f"Frequency ridge is unstable (R^2={r2:.2f}); drift rate may not be meaningful "
+                        "for noisy or wideband signals.")
+    return Estimate(
+        name=name, value=slope, unit="Hz/s", source=Source.ESTIMATED,
+        confidence=float(min(0.9, max(0.0, r2))),
+        evidence=["Per-frame argmax of STFT magnitude, least-squares fit of ridge vs time"],
+        warnings=warnings,
+    )
+
+
 @dataclass
 class SpectralFeatures:
     occupied_bandwidth_hz: Estimate
@@ -105,6 +152,7 @@ class SpectralFeatures:
     crest_factor: Estimate
     zero_crossing_rate: Estimate
     snr_db: Estimate
+    frequency_drift_rate: Estimate
     warnings: list[str] = field(default_factory=list)
 
 
@@ -120,6 +168,7 @@ def extract_spectral_features(samples: np.ndarray, sample_rate: float, fft_size:
     crest = crest_factor(samples)
     zcr = zero_crossing_rate(samples)
     snr = estimate_snr_db(samples, sample_rate, fft_size)
+    drift = estimate_frequency_drift_rate(samples, sample_rate)
 
     return SpectralFeatures(
         occupied_bandwidth_hz=Estimate("occupied_bandwidth", obw, "Hz", Source.ESTIMATED, confidence=0.6,
@@ -134,4 +183,5 @@ def extract_spectral_features(samples: np.ndarray, sample_rate: float, fft_size:
         snr_db=Estimate("snr", snr, "dB", Source.ESTIMATED, confidence=0.5,
                          evidence=["peak PSD minus median PSD (noise-floor proxy)"],
                          warnings=["Rough estimate; assumes noise dominates the spectral median."]),
+        frequency_drift_rate=drift,
     )

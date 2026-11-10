@@ -230,6 +230,7 @@ async def detect_bursts(
                 "endian": meta.endian or "little",
                 "sample_rate_hz": meta.sample_rate,
                 "center_frequency_hz": meta.center_frequency,
+                "channels": meta.raw_metadata_json.get("channels", 1),
             }
         elif loader == "wav":
             params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
@@ -301,6 +302,7 @@ async def deep_analysis(
     from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
     from signalscope_dsp.modulation.classifier import mth_power_spectrum
     from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
+    from signalscope_dsp.interferometry import interferometric_origin
     from signalscope_dsp.interleaving import (
         block_deinterleave, convolutional_deinterleave, diagonal_deinterleave,
         score_deinterleave_candidate, run_length_histogram,
@@ -315,6 +317,7 @@ async def deep_analysis(
 
     loader = rec.file_format
     params: dict = {}
+    baseline_m = None
     if meta and meta.raw_metadata_json:
         if loader == "raw_iq":
             params = {
@@ -323,7 +326,9 @@ async def deep_analysis(
                 "endian": meta.endian or "little",
                 "sample_rate_hz": meta.sample_rate,
                 "center_frequency_hz": meta.center_frequency,
+                "channels": meta.raw_metadata_json.get("channels", 1),
             }
+            baseline_m = meta.raw_metadata_json.get("baseline_m")
         elif loader == "wav":
             params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
 
@@ -358,6 +363,15 @@ async def deep_analysis(
     wf_db = wf_db[np.ix_(freq_idx, time_idx)]
 
     feats = extract_spectral_features(work, sr)
+
+    _inter_cfg = ConditioningConfig(remove_dc_offset=True, normalize=True)
+    _inter_other = [
+        condition_signal(a[: len(work)], sr, _inter_cfg).samples for a in loaded.other_channels
+    ]
+    inter_est = interferometric_origin(
+        [work, *_inter_other], sr,
+        baseline_m=baseline_m if isinstance(baseline_m, (int, float)) else None,
+    )
     features = {
         f.name: {"value": f.value, "unit": f.unit, "source": f.source.value, "confidence": f.confidence,
                  "evidence": f.evidence, "warnings": f.warnings}
@@ -369,6 +383,8 @@ async def deep_analysis(
             ("crest_factor", feats.crest_factor),
             ("zero_crossing_rate", feats.zero_crossing_rate),
             ("snr_db", feats.snr_db),
+            ("frequency_drift_rate", feats.frequency_drift_rate),
+            ("interferometric_origin", inter_est),
         ]
     }
 

@@ -4,6 +4,7 @@ export type Source =
   | "measured"
   | "estimated"
   | "hypothesis"
+  | "ai_hypothesis"
   | "unknown";
 
 export interface Estimate {
@@ -230,6 +231,62 @@ export interface RawIQOptions {
 
 export interface WavOptions {
   stereo_mode: string;
+}
+
+/* ── AI insights (Gemma 4 sidecar) ───────────────────────────────────── */
+
+export interface InsightHypothesis {
+  label: string;
+  agreement_with_dsp: boolean | null;
+  confidence_note: string;
+  evidence_refs: string[];
+}
+
+export interface InsightConflict {
+  between: string[];
+  explanation: string;
+  evidence_refs: string[];
+}
+
+export interface InsightAnomaly {
+  description: string;
+  severity: string;
+  evidence_refs: string[];
+}
+
+export interface InsightAction {
+  action: string;
+  args: Record<string, unknown>;
+  why: string;
+  evidence_refs: string[];
+}
+
+export interface InsightPayload {
+  summary_template?: string;
+  summary: string;
+  hypothesis?: InsightHypothesis;
+  conflicts?: InsightConflict[];
+  anomalies?: InsightAnomaly[];
+  recommended_actions?: InsightAction[];
+  unknowns?: string[];
+  limitations?: string[];
+  citations?: Record<string, string>;
+  tool_trace?: Record<string, unknown>[];
+  model_name?: string;
+  prompt_version?: string;
+}
+
+export interface AnalysisInsight {
+  id: string;
+  project_id: string;
+  model_name: string;
+  prompt_version: string;
+  status: "queued" | "completed" | "failed" | string;
+  response_json: InsightPayload | null;
+  tool_trace_json: Record<string, unknown>[] | null;
+  citations_json: Record<string, string> | null;
+  error_message: string | null;
+  created_at: string;
 }
 
 export interface UploadPayload {

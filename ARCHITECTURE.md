@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🏗️ SignalScope AI — System Architecture
+# SignalScope AI — System Architecture
 
-**A deep dive into how the pieces fit together: services, tech stacks, and the DSP processing flow.**
+**How the frontend, API, Celery worker, DSP core, data stores, and optional Gemma 4 sidecar fit together.**
 
 ---
 
@@ -17,18 +17,23 @@
 ![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![NumPy](https://img.shields.io/badge/NumPy-2.2-013243?style=for-the-badge&logo=numpy&logoColor=white)
 ![SciPy](https://img.shields.io/badge/SciPy-1.15-8CAAE6?style=for-the-badge&logo=scipy&logoColor=white)
+![Gemma](https://img.shields.io/badge/Gemma%204-optional-4285F4?style=for-the-badge&logo=google&logoColor=white)
 
 </div>
 
 ---
 
-## 🗺️ System Overview
+## System overview
 
-**Five layers, one goal: turn raw RF recordings into *explainable* parameter estimates.** The request path is fully async — the browser fires an analysis job, Celery executes the DSP pipeline in the background, and the frontend polls the job status until results land in Postgres.
+SignalScope turns raw RF recordings into **explainable parameter estimates**.
+
+The deterministic path is fully async: the browser uploads a recording, the API validates it with the same DSP loaders used by the worker, Celery runs the analysis pipeline in the background, and provenance rows land in PostgreSQL. The UI polls job status and refetches results when the job completes.
+
+An optional Gemma 4 sidecar adds a cited analyst brief on top of the stored evidence. It is **not** part of the deterministic truth path: it reads evidence, calls allowlisted DSP tools, and returns `ai_hypothesis` output whose numbers are substituted by the backend.
 
 ---
 
-## 📐 System Design Diagram
+## System design diagram
 
 ```mermaid
 %%{init: {
@@ -47,109 +52,220 @@
   'flowchart': { 'curve': 'basis', 'nodeSpacing': 45, 'rankSpacing': 55, 'padding': 10 }
 }}%%
 flowchart TB
-    subgraph CLIENT["👤 Client"]
-        U["👩‍💻 Analyst<br/><span style='opacity:.75;font-size:12px'>browser session</span>"]
+    subgraph CLIENT["Client"]
+        U["Analyst<br/><span style='opacity:.75;font-size:12px'>authenticated browser session · JWT cookie</span>"]
     end
 
-    subgraph FRONTEND["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/nextdotjs/e2e8f0' height='15'/> &nbsp;<b>Frontend</b> · Next.js 14"]
+    subgraph FRONTEND["Frontend · Next.js 14"]
         direction LR
-        N["React / TypeScript · Tailwind<br/><span style='opacity:.75;font-size:12px'>upload · workspace · 2 s job polling</span>"]
+        N["Dashboard · Recording library · Analysis workspace<br/><span style='opacity:.75;font-size:12px'>Waveform · I/Q scatter · PSD · waterfall · proof panels</span>"]
+        Q["TanStack Query<br/><span style='opacity:.75;font-size:12px'>2 s job polling · invalidate on completion</span>"]
+        N --- Q
     end
 
-    subgraph API["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/fastapi/4f94ef' height='15'/> &nbsp;<b>API</b> · FastAPI"]
+    subgraph API["API · FastAPI"]
         direction LR
-        A["REST /api/* · JWT auth<br/><span style='opacity:.75;font-size:12px'>uploads · projects · job dispatch</span>"]
+        A["REST /api/* · JWT auth<br/><span style='opacity:.75;font-size:12px'>auth · uploads · projects · recordings · jobs</span>"]
+        I["Insights router<br/><span style='opacity:.75;font-size:12px'>POST/GET /api/projects/{id}/insights</span>"]
+        T["Private DSP tools<br/><span style='opacity:.75;font-size:12px'>/internal/dsp-tools/{tool} + token</span>"]
+        A --- I
+        A --- T
     end
 
-    subgraph WORKER["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/celery/e2e8f0' height='15'/> &nbsp;<b>Compute</b> · Celery worker"]
+    subgraph WORKER["Compute · Celery worker"]
         direction TB
-        C["signalscope_dsp<br/><span style='opacity:.75;font-size:12px'>load → spectrum → burst → modulation →<br/>symbol-rate → demod → FEC → evidence</span>"]
+        C["estimate_parameters_task<br/><span style='opacity:.75;font-size:12px'>load → condition → spectrum → bursts → modulation →<br/>symbol-rate → interferometry → provenance</span>"]
+        G["generate_insight_task<br/><span style='opacity:.75;font-size:12px'>evidence bundle → images → AI sidecar → validation</span>"]
     end
 
-    subgraph DATA["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/postgresql/dc7a3a' height='15'/> &nbsp;<b>Data</b>"]
+    subgraph AI["Optional · Gemma 4 sidecar"]
         direction LR
-        P["PostgreSQL<br/><span style='opacity:.75;font-size:12px'>projects · estimates · jobs</span>"]
-        R["<img style='vertical-align:middle' src='https://cdn.simpleicons.org/redis/e2e8f0' height='14'/> Redis<br/><span style='opacity:.75;font-size:12px'>job queue + status</span>"]
-        V["📦 Volume<br/><span style='opacity:.75;font-size:12px'>raw RF files on disk</span>"]
+        M["Local model<br/><span style='opacity:.75;font-size:12px'>fake · transformers · GGUF/Ollama-class</span>"]
+        L["Agent loop<br/><span style='opacity:.75;font-size:12px'>allowlisted tools · max steps · timeout</span>"]
+        V["Validation<br/><span style='opacity:.75;font-size:12px'>schema · citations · numeric guard</span>"]
+        M --- L --- V
     end
 
-    U -->|"① upload a recording"| N
-    N -->|"② POST /estimate-parameters"| A
+    subgraph DATA["Data"]
+        direction LR
+        P["PostgreSQL 16<br/><span style='opacity:.75;font-size:12px'>users · recordings · projects · jobs ·<br/>parameter_estimates · analysis_insights</span>"]
+        R["Redis 7<br/><span style='opacity:.75;font-size:12px'>rate limits · Celery broker · result backend</span>"]
+        D["Upload volume<br/><span style='opacity:.75;font-size:12px'>raw RF files on disk</span>"]
+    end
+
+    U -->|"① upload / load demo"| N
+    N -->|"② REST + JWT"| A
     A -->|"③ job.delay(project_id)"| R
     A -.->|"202 · { job_id }"| N
     R -->|"④ consume task"| C
-    C -->|"⑤ read RF file"| V
-    C -->|"⑤ upsert estimates"| P
+    C -->|"⑤ read recording"| D
+    C -->|"⑥ upsert estimates + evidence"| P
     C -.->|"mark SUCCESS"| R
-    N -->|"⑥ poll /jobs/{id} → estimates + evidence"| A
+    N -->|"⑦ poll /jobs/{id} · 2 s"| A
+    A -->|"⑧ estimates + proof payloads"| P
+    N -.->|"⑨ optional: POST /insights"| I
+    I -->|"queue"| G
+    G -->|"⑩ EvidenceBundle + PNGs"| A
+    A -->|"⑪ /v1/insight"| M
+    M -->|"tool calls"| L
+    L -->|"X-Internal-Token"| T
+    T -->|"DSP results"| L
+    V -->|"validated cited brief"| G
+    G -->|"⑫ analysis_insights row"| P
+    N -->|"⑬ AI brief labelled ai_hypothesis"| P
 ```
 
 ---
 
-## 🧩 Decomposition Notes
+## Layer decomposition
 
-### 1. Client Layer
-The browser is a pure **JWT cookie-authenticated** SPA. TanStack Query owns server-state: the job is polled every **2 s** while `queued`/`running`, and the parameter-estimate query is **invalidated and refetched automatically the moment the job flips to `completed`**. No hard refreshes — results stream in.
+### 1. Client layer
 
-### 2. Application Layer (FastAPI)
-- Auth with `argon2` password hashing, JWT in an httpOnly cookie (Bearer fallback for API tooling).
-- All uploads validated for type (`wav/raw/sigmf`) and size (200 MB cap).
-- `POST /api/projects/{id}/estimate-parameters` returns **202 Accepted** with a `job_id` — the client never blocks.
+- Next.js 14 App Router SPA with JWT cookie authentication.
+- TanStack Query owns server state. Jobs are polled every 2 s while `queued`/`running`; parameter and insight queries are invalidated when the job flips to `completed`.
+- Plotly renders waveform, I/Q scatter, PSD, waterfall, constellation, proof spectra, and ranked candidate bars.
+- `ProofPanel` drills into evidence inline on desktop and as a bottom sheet at ≤375 px.
+- The UI is installable (web manifest + icons) and responsive.
 
-### 3. Compute Layer (Celery Worker)
-- Consumes tasks from **Redis db 1**, reports results to **Redis db 2**.
-- Runs `signalscope_dsp` — the same library is `pip install -e`'d into the worker **and** the API, so estimates and pre-checks can never drift out of sync.
+### 2. Application layer (FastAPI)
 
-### 4. DSP Pipeline
-`load → crop → spectral/burst analysis → modulation → symbol rate → demod → de-interleave → FEC → bit correlation → provenance assembly`. Every stage emits candidates with **evidence strings**; the final `Estimate` carries `{name, value, unit, source, confidence, alternatives, warnings}`.
+- Auth with Argon2 password hashing and JWT in an httpOnly cookie (Bearer fallback for tooling).
+- Uploads validated for format (`wav`, `raw_iq`, `sigmf`), size (200 MB cap), and content using the DSP loaders; files are streamed to disk with SHA-256 hashing and duplicate detection.
+- `POST /api/projects/{id}/estimate-parameters` returns **202 Accepted** with a job id.
+- Deep analysis runs synchronously over a bounded ROI window for interactive proof and FEC experiments.
+- The optional `POST /api/projects/{id}/insights` route queues an AI brief and returns **202**; it returns **503** when `AI_ENABLED=false`.
+- `/internal/dsp-tools/{tool_name}` is a private, shared-secret route used only by the AI sidecar. An empty `INTERNAL_API_TOKEN` disables it.
 
-### 5. Data Layer
-- **Postgres** — relational store for users, projects, recordings, jobs, and `parameter_estimates` (JSONFlex `value_json` + `evidence_json`).
-- **Redis db 0** — rate-limit counters and job-metadata lookups.
-- **Volume** — recorded RF files kept on disk, referenced from the DB, never in-memory.
+### 3. Compute layer (Celery worker)
+
+- Consumes tasks from Redis db 1 and reports to Redis db 2.
+- Runs `signalscope_dsp` — installed editable into both the worker and API so pre-checks and estimates cannot drift.
+- `estimate_parameters_task`: full-recording analysis and provenance persistence.
+- `generate_insight_task`: builds an evidence bundle, renders evidence images, calls the AI sidecar, validates the response, and stores `analysis_insights`.
+- AI failure never destroys DSP results; the failure is stored with an error message for the UI.
+
+### 4. DSP pipeline
+
+```text
+load → ROI crop → condition → PSD/waterfall → spectral features
+     → burst detection → modulation classification
+     → symbol-rate candidates → interferometric origin
+     → demodulation → de-interleaving → FEC → bit correlation
+     → provenance assembly
+```
+
+Every stage emits candidates with **evidence strings**. The final `Estimate` carries:
+
+```json
+{
+  "name": "symbol_rate",
+  "value": 250000.0,
+  "unit": "symbols/s",
+  "source": "estimated",
+  "confidence": 0.93,
+  "evidence": ["dominant spectral peak at 250.0 kHz ..."],
+  "alternatives": [],
+  "warnings": []
+}
+```
+
+**Sources** — `metadata`, `user_supplied`, `measured`, `estimated`, `hypothesis`, `ai_hypothesis`, `unknown`.
+
+**Interferometric origin** — when a raw-IQ recording contains simultaneous antenna channels (`channels >= 2`, interleaved `I0 Q0 I1 Q1 ...` frames), the worker correlates antennas and returns `sky`, `near_field_observatory`, or `inconclusive`. Coherence, phase-slope linearity, delay, and optional `baseline_m` bounds are included in the evidence.
+
+### 5. AI layer (optional)
+
+- `services/ai` is a separate FastAPI service on port `8100`, started with the `ai` Compose profile.
+- Backends: deterministic `fake` (no model download), `transformers` (local Gemma 4), and a scaffold for GGUF/Ollama-class local runtimes.
+- Default model: `google/gemma-4-E4B-it` (Apache-2.0).
+- Rendered evidence images (PSD, waterfall, constellation, M-th power) are generated with Pillow and sent as bounded PNG data URIs; raw I/Q is never sent.
+- The model may call only: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`.
+- Tool count and duration are bounded by `AI_MAX_TOOL_STEPS` and `AI_TOOL_TIMEOUT_SECONDS`.
+- Validation enforces strict JSON schema, evidence references, numeric substitution (`{{estimate:name}}`), and allowlisted tool traces. Failures retry once, then fall back safely.
+
+### 6. Data layer
+
+- **PostgreSQL 16** — users, recordings, metadata, projects, jobs, parameter estimates (`value_json` + `evidence_json`), and analysis insights (`response_json`, `tool_trace_json`, `citations_json`).
+- **Redis db 0** — rate-limit counters and app cache.
+- **Redis db 1** — Celery broker.
+- **Redis db 2** — Celery result backend and job status.
+- **Upload volume** — raw RF files on disk, referenced from the database and never held in memory beyond a bounded window.
 
 ---
 
-## 🔄 Request / Lifecycle Flow
+## Request / lifecycle flow
 
 ```mermaid
 sequenceDiagram
     participant B as Browser
     participant A as FastAPI
-    participant R as Redis Broker
+    participant R as Redis
     participant W as Celery Worker
     participant P as Postgres
+    participant G as Gemma 4 sidecar
 
-    B->>A: POST /estimate-parameters (JWT)
-    A->>R: job.delay(project_id)
-    A-->>B: 202 { job_id, status:"queued" }
-    B->>W: worker picks task
-    W->>W: signalscope_dsp pipeline
+    B->>A: POST /projects/{id}/estimate-parameters (JWT)
+    A->>R: enqueue estimate_parameters
+    A-->>B: 202 { job_id, status: "queued" }
+    R->>W: deliver task
+    W->>W: load → DSP pipeline → provenance
     W->>P: upsert parameter_estimates
     W-->>R: mark SUCCESS
-    loop every 2s
+
+    loop every 2 s
         B->>A: GET /jobs/{id}
-        A-->>B: status:"running"
+        A-->>B: status: running
     end
+
     B->>A: GET /jobs/{id}
-    A-->>B: status:"completed"
-    B->>A: GET /projects/{id}/parameters (refetched)
-    A-->>B: estimates[ ] with source+confidence+evidence
+    A-->>B: status: completed
+    B->>A: GET /projects/{id}/parameters
+    A-->>B: estimates[] with source + confidence + evidence
+
+    opt AI enabled
+        B->>A: POST /projects/{id}/insights
+        A->>R: enqueue generate_insight
+        A-->>B: 202 { job_id }
+        R->>W: deliver insight task
+        W->>P: read evidence bundle
+        W->>G: POST /v1/insight (evidence + PNGs)
+        G->>A: allowlisted DSP tool calls
+        A-->>G: tool results
+        G-->>W: validated cited brief (ai_hypothesis)
+        W->>P: insert analysis_insights
+        B->>A: GET /projects/{id}/insights
+        A-->>B: cited brief + tool trace + citations
+    end
 ```
 
 ---
 
-## 💻 Local Development Topology
+## Local development topology
 
-| Container | Image build | Exposed port | Role |
-|-----------|-------------|--------------|------|
+| Container | Image build | Port | Role |
+|---|---|---|---|
 | `web` | `docker/Dockerfile.web` | `3000` | Next.js standalone server |
 | `api` | `docker/Dockerfile.api` | `8000` | FastAPI + `/docs` |
-| `worker` | `docker/Dockerfile.worker` | — | Celery DSP executor |
+| `worker` | `docker/Dockerfile.worker` | — | Celery DSP/insight executor |
+| `ai` (optional) | `services/ai/Dockerfile` | `8100` | Local Gemma 4 sidecar |
 | `postgres` | `postgres:16-alpine` | `5432` | Primary datastore |
 | `redis` | `redis:7-alpine` | `6379` | Broker + backend + cache |
 
-> The dev overlay (`docker-compose.dev.yml`) adds hot-reload for api/worker. Run the web dev server on the host for frontend HMR.
+> The dev overlay (`docker-compose.dev.yml`) adds hot-reload for API and worker. Run the web dev server on the host for frontend HMR. The AI service is opt-in via `docker compose --profile ai up`.
+
+---
+
+## Scaling and failure behavior
+
+| Concern | Behavior |
+|---|---|
+| Large recordings | Uploads are streamed; interactive analysis reads a bounded window (200k samples); the worker processes the ROI with the full pipeline. |
+| Worker down | Jobs remain queued; the UI keeps polling and surfaces the state instead of hanging. |
+| AI down or invalid | DSP results are untouched; the insight row records the error and the UI shows an explicit fallback. |
+| Cross-user access | Every project, recording, job, and insight route checks ownership. |
+| Rate limiting | Redis-backed limits on login and upload paths. |
+| Secrets | `SECRET_KEY` must be overridden; `INTERNAL_API_TOKEN` gates the private DSP tool route. |
+| AI numeric honesty | Numbers in the brief are backend-substituted from provenance; the model never writes authoritative values. |
 
 ---
 

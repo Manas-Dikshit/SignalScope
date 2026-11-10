@@ -1,28 +1,34 @@
-# RUN.md — Run SignalScope AI (everything)
+# RUN.md — Run SignalScope AI end to end
 
-Verified against the current repo: **API tests (32) ✅, DSP tests (59) ✅,
-frontend tests (26) ✅, frontend build ✅, full Docker stack (postgres + redis +
-api + worker + web) all healthy ✅.**
+SignalScope ships four test suites (**165 tests**): **69 DSP**, **51 API**, **19 AI**,
+and **26 frontend**. The default stack is deterministic and offline; the Gemma 4
+analyst sidecar is optional.
 
-Pick ONE of the three modes below. Mode 1 (Docker, all-in-one) is the
-recommended default. Modes 2–3 run each piece in its own terminal so you can
-see/log each service independently.
+Pick one of the modes below. **Mode 1 (Docker, all-in-one)** is the recommended
+default. Modes 2–3 run each piece in its own terminal so you can watch each
+service independently.
 
-Prereqs everywhere: **Docker Desktop running** (Mode 1 only), **Python 3.11–3.13**
-(native backend only — the pinned NumPy/SciPy versions have no 3.14 wheels),
-**Node 20+**.
+**Prerequisites**
+
+- **Docker Desktop running** (Mode 1 only)
+- **Python 3.11–3.13** for native backend work — pinned NumPy/SciPy have no
+  Python 3.14 wheels
+- **Node 20+** for frontend development and tests
 
 ---
 
-## Mode 1 — Docker Compose (recommended, everything in one command)
+## Mode 1 — Docker Compose (recommended)
 
-Everything (DB + cache + API + worker + web) runs in containers. Usually takes
-1 terminal.
+Everything (Postgres + Redis + API + worker + web) runs in containers. Usually
+takes one terminal.
 
 ```powershell
 # 0. One-time env prep
 cp .env.example .env
 cp apps/web/.env.example apps/web/.env.local
+
+# Generate a real secret and put it in .env as SECRET_KEY
+openssl rand -hex 32
 
 # 1. Build + start (dev overlay = API/worker hot-reload)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
@@ -32,43 +38,49 @@ Or production-mode (no hot-reload, detached):
 
 ```powershell
 docker compose up --build -d
-docker compose ps            # all 5 should be (healthy)
+docker compose ps            # all services should be healthy
 ```
 
-Useful:
+Useful commands:
+
 ```powershell
 docker compose down          # stop (data persists in volumes)
 docker compose down -v       # stop AND wipe DB/upload data
-docker compose logs -f api   # watch one service's logs
+docker compose logs -f api   # watch one service
+docker compose exec postgres psql -U signalscope -d signalscope
 ```
 
 URLs:
-- Web:    http://localhost:3000
-- API:    http://localhost:8000  (Swagger docs at http://localhost:8000/docs)
-- DB:      localhost:5432  (user/pass/db = `signalscope`)
-- Redis:   localhost:6379
+
+| Service | URL |
+|---|---|
+| Web | http://localhost:3000 |
+| API | http://localhost:8000 |
+| Swagger docs | http://localhost:8000/docs |
+| Postgres | `localhost:5432` (`signalscope` / `signalscope`) |
+| Redis | `localhost:6379` |
 
 Migrations (`alembic upgrade head`) run automatically when the API container
-starts — you don't run alembic yourself in this mode.
+starts — you do not run Alembic yourself in this mode.
 
 ---
 
-## Mode 2 — Full native (each piece in its own terminal + Docker DB/cache)
+## Mode 2 — Full native (each piece in its own terminal)
 
 The database and cache run in Docker; the API, worker, and web run natively in
-separate terminals (easiest way to watch each one independently).
+separate terminals.
 
 ### Terminal A — database (Postgres + Redis in Docker)
 
 ```powershell
 docker compose up -d postgres redis
-docker compose ps    # both should be (healthy)
+docker compose ps
 ```
 
-The `.env` already points at `postgres`/`redis` hostnames, which only resolve
-inside the Docker network. For native clients, either change `.env` to
-`localhost` or add the two lines below. Simplest: edit `.env` once:
-```
+The `.env` points at `postgres`/`redis` hostnames, which only resolve inside the
+Docker network. For native clients, edit `.env` once:
+
+```dotenv
 DATABASE_URL=postgresql+asyncpg://signalscope:signalscope@localhost:5432/signalscope
 DATABASE_URL_SYNC=postgresql://signalscope:signalscope@localhost:5432/signalscope
 REDIS_URL=redis://localhost:6379/0
@@ -88,7 +100,9 @@ alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Terminal C — Celery worker (required for DSP/parameter-estimation jobs)
+### Terminal C — Celery worker
+
+Required for DSP/parameter-estimation jobs and AI insight jobs.
 
 ```powershell
 cd services/api
@@ -104,59 +118,131 @@ npm install
 npm run dev
 ```
 
-URLs: web http://localhost:3000, API http://localhost:8000/docs.
+URLs: web http://localhost:3000, API docs http://localhost:8000/docs.
 
 ---
 
-## Mode 3 — Run the test suites
+## Mode 3 — Test suites
 
-Run the three test suites (any order). Each in its own terminal if you want
-them parallel.
+Run the suites in any order. Each in its own terminal if you want them parallel.
 
-### Terminal A — backend API tests (32)
+| Suite | Tests | Command |
+|---|---:|---|
+| API | 51 | `cd services/api && python -m pytest tests/ -q` |
+| DSP core | 69 | `cd services/dsp-worker && python -m pytest tests/ -q` |
+| AI sidecar | 19 | `cd services/ai && python -m pytest tests/ -q` |
+| Frontend | 26 | `cd apps/web && npm install && npm test` |
 
-```powershell
-cd services/api
-python -m pytest tests/ -q
-```
-
-### Terminal B - DSP core tests (59)
-
-```powershell
-cd services/dsp-worker
-python -m pytest tests/ -q
-```
-
-### Terminal C — frontend tests + build (26 tests, type-check)
+Frontend type-check/build:
 
 ```powershell
 cd apps/web
-npm install
-npm test      # vitest run
-npm run build # next build (also type-checks)
+npm run build
 ```
+
+The AI suite includes validation, cited brief generation, low-confidence tool
+follow-ups, max-step/timeout handling, and evidence-image caps. The DSP suite
+covers interferometric origin, dual-antenna raw-IQ frames, FEC round trips, and
+bounded-window loading.
+
+> If you have local scratch tests (for example an untracked debug test that
+> intentionally fails), remove or exclude them before running the full suite.
+
+---
+
+## Mode 4 — Optional Gemma 4 AI analyst
+
+The AI sidecar is disabled by default. The core stack runs unchanged with
+`AI_ENABLED=false`.
+
+### Fake backend (no model download)
+
+```dotenv
+AI_ENABLED=true
+AI_BACKEND=fake
+INTERNAL_API_TOKEN=change-me
+```
+
+```powershell
+docker compose --profile ai up --build
+```
+
+### Local Transformers backend
+
+```dotenv
+AI_ENABLED=true
+AI_BACKEND=transformers
+AI_MODEL=google/gemma-4-E4B-it
+AI_INSTALL_TRANSFORMERS=1
+INTERNAL_API_TOKEN=change-me
+```
+
+```powershell
+docker compose --profile ai up --build
+```
+
+The `ai` service listens on http://localhost:8100. `GET /health` reports the
+active backend and model. Model weights are downloaded into the `ai_models`
+volume on first start.
+
+Set the **same** `INTERNAL_API_TOKEN` for `api`, `worker`, and `ai`. An empty
+token disables the private `/internal/dsp-tools/{tool}` route.
+
+Generate a brief from a completed project with **Generate AI Brief** in the
+workspace, or:
+
+```powershell
+curl -X POST http://localhost:8000/api/projects/<project_id>/insights ^
+  -H "Authorization: Bearer <token>"
+```
+
+See [`services/ai/README.md`](services/ai/README.md) and
+[`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](docs/GEMMA4_IMPLEMENTATION_PLAN.md) for
+model options, tool schemas, and GPU notes.
 
 ---
 
 ## End-to-end smoke test
 
-1. Open http://localhost:3000 → Register a user at the login screen.
-2. http://localhost:8000/docs → log in, or reuse the web session.
-3. Upload a `.wav` / `.iq` / `.sigmf-meta`+`.sigmf-data` recording.
-4. In the UI, open the recording → **Analyze** → a Celery job should run and
-   parameter estimates (bandwidth, SNR, modulation, symbol rate, …) appear.
-5. Check the worker terminal for task logs and the API `/dashboard` stats.
+1. Open http://localhost:3000 and register a user.
+2. From the dashboard, click a **demo signal** (QPSK, 2-FSK, 16-QAM, BPSK bursts,
+   or 8-PSK) — or upload a `.wav`, `.iq`, or SigMF pair.
+3. Open the recording → **Analyze**. A Celery job runs and estimates
+   (bandwidth, SNR, modulation, symbol rate, interferometric origin, …) appear.
+4. Expand **View proof** on a confidence-bearing estimate.
+5. Switch to the deep-analysis tabs for demodulated bits, de-interleaving
+   candidates, FEC selection, and correlation.
+6. Optional: click **Generate AI Brief** and inspect the `ai_hypothesis` badge,
+   citations, and tool trace.
+7. Check worker logs and `GET /api/dashboard/stats`.
 
-## Port clash note
+There is also a scripted smoke test:
 
-If you already run a native Postgres on 5432, it shadows Docker's port for
-host-local tools. Docker's own containers still reach it on the private
-network. To psql the Docker DB: `docker compose exec postgres psql -U signalscope -d signalscope`.
+```powershell
+python scripts/smoke_test.py
+```
+
+---
+
+## Port clash notes
+
+- If a native PostgreSQL already listens on 5432, it shadows Docker Postgres for
+  host-local tools. Containers still reach it on the private network. Use
+  `docker compose exec postgres psql -U signalscope -d signalscope` for the
+  Docker database.
+- If port 3000 or 8000 is occupied, stop the conflicting process or change the
+  compose port mapping.
+
+---
 
 ## Troubleshooting
 
-- **Jobs never complete** → worker container/process down, or `signalscope_dsp`
-  not installed editable. Reinstall with `pip install -e ..\dsp-worker`.
-- **API won't start / table errors** → schema missing: run `alembic upgrade head`.
-- **Web can't reach API** → `NEXT_PUBLIC_API_URL` in `apps/web/.env.local` must
-  match the API, and backend `CORS_ORIGINS` must include the web origin.
+| Symptom | Fix |
+|---|---|
+| Jobs never complete | Worker container/process down, or `signalscope_dsp` not installed editable. Reinstall with `pip install -e ..\dsp-worker`. |
+| API won't start / table errors | Schema missing: run `alembic upgrade head`. |
+| Web can't reach API | `NEXT_PUBLIC_API_URL` in `apps/web/.env.local` must match the API, and backend `CORS_ORIGINS` must include the web origin. |
+| AI route returns 503 | Set `AI_ENABLED=true` and start the `ai` profile. |
+| AI tool calls fail | `INTERNAL_API_TOKEN` must match on `api` and `ai`; an empty token disables the route. |
+| Insight generation fails | Check the `ai` service logs and the `analysis_insights.error_message` row. DSP results are preserved. |
+| Slow first AI request | Model download/load happens on first use with the Transformers backend. Use `AI_BACKEND=fake` for fast offline demos. |

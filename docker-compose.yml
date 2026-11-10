@@ -49,6 +49,15 @@ services:
       CORS_ORIGINS: http://localhost:3000
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8100}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-120}
+      AI_PROMPT_VERSION: ${AI_PROMPT_VERSION:-2026-11-01}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-}
+      AI_EVIDENCE_IMAGES_ENABLED: ${AI_EVIDENCE_IMAGES_ENABLED:-true}
+      AI_MAX_IMAGE_BYTES: ${AI_MAX_IMAGE_BYTES:-300000}
+      AI_MAX_TOTAL_IMAGE_BYTES: ${AI_MAX_TOTAL_IMAGE_BYTES:-1000000}
     ports:
       - "8000:8000"
     volumes:
@@ -73,8 +82,49 @@ services:
       SECRET_KEY: change-me-in-production-use-openssl-rand-hex-32
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8100}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-120}
+      AI_PROMPT_VERSION: ${AI_PROMPT_VERSION:-2026-11-01}
+      AI_EVIDENCE_IMAGES_ENABLED: ${AI_EVIDENCE_IMAGES_ENABLED:-true}
+      AI_MAX_IMAGE_BYTES: ${AI_MAX_IMAGE_BYTES:-300000}
+      AI_MAX_TOTAL_IMAGE_BYTES: ${AI_MAX_TOTAL_IMAGE_BYTES:-1000000}
     volumes:
       - uploads_data:/data
+
+  # Optional local Gemma 4 sidecar. It is NOT part of the default stack:
+  #   docker compose --profile ai up --build
+  # The API and worker keep working when this service is absent.
+  ai:
+    build:
+      context: .
+      dockerfile: services/ai/Dockerfile
+      args:
+        INSTALL_TRANSFORMERS: ${AI_INSTALL_TRANSFORMERS:-0}
+    profiles: ["ai"]
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      AI_BACKEND: ${AI_BACKEND:-fake}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_DEVICE: ${AI_DEVICE:-auto}
+      AI_ENABLE_THINKING: ${AI_ENABLE_THINKING:-false}
+      AI_MAX_NEW_TOKENS: ${AI_MAX_NEW_TOKENS:-1024}
+      AI_MAX_TOOL_STEPS: ${AI_MAX_TOOL_STEPS:-6}
+      AI_PROMPT_VERSION: ${AI_PROMPT_VERSION:-2026-11-01}
+      API_INTERNAL_URL: ${API_INTERNAL_URL:-http://api:8000}
+      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-}
+      AI_TOOL_TIMEOUT_SECONDS: ${AI_TOOL_TIMEOUT_SECONDS:-30}
+      AI_MAX_IMAGE_BYTES: ${AI_MAX_IMAGE_BYTES:-300000}
+      AI_MAX_TOTAL_IMAGE_BYTES: ${AI_MAX_TOTAL_IMAGE_BYTES:-1000000}
+      HF_HOME: /models
+    ports:
+      - "8100:8100"
+    volumes:
+      - ai_models:/models
 
   web:
     build:
@@ -90,3 +140,4 @@ services:
 volumes:
   postgres_data:
   uploads_data:
+  ai_models:

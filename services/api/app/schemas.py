@@ -299,6 +299,23 @@ class DeepAnalysisResponse(BaseModel):
     correlation: AnalysisCorrelation
 
 
+# ── AI Insights ───────────────────────────────────────────────────────────────
+
+class AnalysisInsightResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    project_id: uuid.UUID
+    model_name: str
+    prompt_version: str
+    status: str
+    response_json: dict[str, Any] | None
+    tool_trace_json: list[dict[str, Any]] | None
+    citations_json: dict[str, Any] | None
+    error_message: str | None
+    created_at: datetime
+
+
 # ── Common ────────────────────────────────────────────────────────────────────
 
 class PaginatedResponse(BaseModel, Generic[T]):

@@ -13,6 +13,7 @@ import {
   CircleDashed,
   ChevronDown,
   AlertTriangle,
+  Bot,
 } from "lucide-react";
 
 /* ── Source configuration ────────────────────────────────────────────── */
@@ -27,6 +28,7 @@ const SOURCE_CONFIG: Record<Source, {
   measured:      { icon: Ruler,          label: "measured (exact)",      exact: true },
   estimated:     { icon: Calculator,     label: "estimated",             exact: false },
   hypothesis:    { icon: FlaskConical,   label: "hypothesis",            exact: false },
+  ai_hypothesis: { icon: Bot,            label: "ai hypothesis",         exact: false },
   unknown:       { icon: CircleDashed,   label: "unknown",               exact: false },
 };
 
@@ -114,7 +116,7 @@ export function ProvenanceBadge({
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-      <span className="font-medium">{config.label.split(" ")[0]}</span>
+      <span className="font-medium">{config.label.split(" (")[0]}</span>
       {!config.exact && tier && (
         <ConfidenceIndicator
           confidence={confidence!}

@@ -51,6 +51,19 @@ async def setup_db():
         await conn.run_sync(Base.metadata.drop_all)
 
 
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    """Rate limits are per-process; clear them so test order cannot cause 429s.
+
+    Tests share one ASGI client (and therefore one client IP), so without this
+    the upload login/upload buckets leak across the suite.
+    """
+    from app.ratelimit import _storage
+
+    _storage.reset()
+    yield
+
+
 @pytest_asyncio.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with TestSessionLocal() as session:

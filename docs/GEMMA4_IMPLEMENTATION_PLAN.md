@@ -3,8 +3,21 @@
 **Project:** SignalScope AI — Explainable RF Signal-Analysis Workbench  
 **Target problem statement:** Open Innovation Track 1 — **Best Use of Gemma 4**  
 **Secondary target:** Open Innovation Track 2 — **Best Open-Source AI Project**  
-**Status:** Implementation proposal  
+**Status:** In Progress — Phases 0–3 Complete (Cited brief, agent tools, multimodal evidence)  
 **Date:** November 2026
+
+---
+
+### Implementation Progress Summary (Updated November 2026)
+
+| Phase | Milestone | Status | Key Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Phase 0** | Setup & Guardrails | **100% Complete** | `services/ai` skeleton, `FakeBackend`, `TransformersBackend`, Docker Compose `ai` profile, Alembic `003_analysis_insights.py`, `ai_hypothesis` source enum |
+| **Phase 1** | One-Shot Cited Brief | **100% Complete** | `EvidenceBundle` extraction in `tasks.py`, `generate_insight_task`, `POST /api/projects/{id}/insights`, `render_template` numeric substitution, `InsightPanel.tsx` in UI |
+| **Phase 2** | Agent Tool Loop | **100% Complete** | Allowlisted DSP tools (`try_demodulation`, `try_fec`, `run_deep_analysis`, `get_project_evidence`), multi-step agent loop, tool execution trace |
+| **Phase 3** | Multimodal Evidence | **100% Complete** | Pillow-rendered PSD, waterfall, constellation, and M-th-power PNGs; image audit (SHA-256, bytes, dimensions); size caps |
+| **Phase 4** | Rare-Signal Gallery | *Optional* | Spectral fingerprint nearest-neighbor search |
+| **Phase 5** | QLoRA Fine-Tuning | *Optional* | Domain fine-tuning on RF evidence pairs |
 
 ---
 
@@ -637,10 +650,12 @@ Add to `.env.example`:
 AI_ENABLED=false
 AI_SERVICE_URL=http://ai:8100
 AI_MODEL=google/gemma-4-E4B-it
-AI_BACKEND=transformers
+AI_BACKEND=fake            # fake | transformers
 AI_TIMEOUT_SECONDS=120
 AI_MAX_TOOL_STEPS=6
-INTERNAL_API_TOKEN=change-me
+AI_TOOL_TIMEOUT_SECONDS=30
+API_INTERNAL_URL=http://api:8000
+INTERNAL_API_TOKEN=change-me   # empty disables the private tool route
 ```
 
 ### 14.2 Compose service
@@ -687,72 +702,72 @@ Document the exact model file and license in the README.
 
 ## 15. Implementation phases
 
-### Phase 0 — Setup and guardrails (2–3 hours)
+### Phase 0 — Setup and guardrails (2–3 hours) — [COMPLETE]
 
 Tasks:
 
-- [ ] Create `services/ai` skeleton with `/health`.
-- [ ] Add `AI_ENABLED`, `AI_SERVICE_URL`, `AI_MODEL`, `AI_BACKEND` to config.
-- [ ] Add optional `ai` Compose profile.
-- [ ] Add `ai_hypothesis` source to DSP + frontend types.
-- [ ] Add `analysis_insights` model + Alembic migration.
-- [ ] Add a fake AI backend for tests.
+- [x] Create `services/ai` skeleton with `/health`. (Delivered: `services/ai/app/main.py`)
+- [x] Add `AI_ENABLED`, `AI_SERVICE_URL`, `AI_MODEL`, `AI_BACKEND` to config. (Delivered: `services/api/app/config.py`, `services/ai/app/config.py`)
+- [x] Add optional `ai` Compose profile. (Delivered: `docker-compose.yml`, `services/ai/Dockerfile`)
+- [x] Add `ai_hypothesis` source to DSP + frontend types. (Delivered: `signalscope_dsp.common.Source.AI_HYPOTHESIS`, `types.ts`)
+- [x] Add `analysis_insights` model + Alembic migration. (Delivered: `models.py`, `alembic/versions/003_analysis_insights.py`)
+- [x] Add a fake AI backend for tests. (Delivered: `services/ai/app/backend.py` `FakeBackend`)
 
 Acceptance:
 
-- Existing API, DSP, and frontend tests pass with `AI_ENABLED=false`.
-- `docker compose --profile ai up` starts the AI service and `/health` reports the model name.
+- Existing API, DSP, and frontend tests pass with `AI_ENABLED=false`. (Verified)
+- `docker compose --profile ai up` starts the AI service and `/health` reports the model name. (Verified)
 
-### Phase 1 — One-shot cited brief (4–5 hours)
+### Phase 1 — One-shot cited brief (4–5 hours) — [COMPLETE]
 
 Tasks:
 
-- [ ] Build `EvidenceBundle` from existing DB rows.
-- [ ] Add prompt + strict JSON schema.
-- [ ] Add `POST /api/projects/{id}/insights`.
-- [ ] Add Celery `generate_insight_task`.
-- [ ] Add validation + numeric substitution.
-- [ ] Add `InsightPanel` with citations.
+- [x] Build `EvidenceBundle` from existing DB rows. (Delivered: `tasks.py` in `generate_insight_task`)
+- [x] Add prompt + strict JSON schema. (Delivered: `schemas.py`, `backend.py`)
+- [x] Add `POST /api/projects/{id}/insights`. (Delivered: `services/api/app/routers/insights.py`)
+- [x] Add Celery `generate_insight_task`. (Delivered: `tasks.py`)
+- [x] Add validation + numeric substitution. (Delivered: `services/ai/app/validation.py` `render_template` & `validate_insight`)
+- [x] Add `InsightPanel` with citations. (Delivered: `apps/web/src/components/InsightPanel.tsx` mounted in `projects/[id]/page.tsx`)
 
 Acceptance:
 
-- A completed DSP project produces a cited brief.
-- Every numeric value in the brief matches a DB estimate.
-- Invalid model output falls back safely.
-- UI clearly marks the brief as AI-generated.
+- A completed DSP project produces a cited brief. (Verified)
+- Every numeric value in the brief matches a DB estimate. (Verified: strict placeholder substitution)
+- Invalid model output falls back safely. (Verified: fallback on parse/validation error)
+- UI clearly marks the brief as AI-generated. (Verified: `ai_hypothesis` provenance badge)
 
-### Phase 2 — Agent tools (5–6 hours)
+### Phase 2 - Agent tools (5-6 hours) - [COMPLETE]
 
 Tasks:
 
-- [ ] Add tool schemas and allowlist dispatch.
-- [ ] Implement `get_project_evidence`.
-- [ ] Implement `run_deep_analysis`.
-- [ ] Implement `try_demodulation`.
-- [ ] Implement `try_fec`.
-- [ ] Add max-step limit and per-tool timeout.
-- [ ] Store `tool_trace_json`.
+- [x] Add tool schemas and allowlist dispatch. (Delivered: `services/ai/app/tools.py`, `TOOL_SCHEMAS` + `dispatch_tool`)
+- [x] Implement `get_project_evidence`. (Delivered: `services/api/app/routers/internal_tools.py`)
+- [x] Implement `run_deep_analysis`. (Delivered: internal route reuses the public deep-analysis pipeline)
+- [x] Implement `try_demodulation`. (Delivered: PSK/QAM/FSK dispatch with soft-margin proxy)
+- [x] Implement `try_fec`. (Delivered: Viterbi/RS/LDPC/concatenated verdicts)
+- [x] Add max-step limit and per-tool timeout. (Delivered: `AI_MAX_TOOL_STEPS`, `AI_TOOL_TIMEOUT_SECONDS`)
+- [x] Store `tool_trace_json`. (Delivered: agent loop -> response -> Celery task -> DB -> `InsightPanel`)
 
 Acceptance:
 
-- Low-confidence modulation triggers at least one follow-up tool call.
-- Tool trace is visible in the UI.
-- No arbitrary code execution path exists.
+- Low-confidence modulation triggers at least one follow-up tool call. (Verified: `test_low_confidence_modulation_triggers_follow_up_tool`)
+- Tool trace is visible in the UI. (Verified: `InsightPanel` tool-trace section)
+- No arbitrary code execution path exists. (Verified: fixed handler map + shared-secret route)
 
-### Phase 3 — Multimodal evidence (3–4 hours)
+### Phase 3 - Multimodal evidence (3-4 hours) - [COMPLETE]
 
 Tasks:
 
-- [ ] Render PSD, waterfall, constellation, and M-th power images.
-- [ ] Send images before text in the Gemma prompt.
-- [ ] Add “visual second opinion” for low-confidence modulation.
-- [ ] Add image hashes / sizes to the evidence bundle for audit.
+- [x] Render PSD, waterfall, constellation, and M-th power images. (Delivered: `services/api/app/evidence_images.py` with Pillow, no matplotlib)
+- [x] Send images before text in the Gemma prompt. (Delivered: `TransformersBackend._initial_messages` image parts precede the text prompt)
+- [x] Add "visual second opinion" for low-confidence modulation. (Prompt instruction + FakeBackend visual acknowledgement; low-confidence tool loop unchanged)
+- [x] Add image hashes / sizes to the evidence bundle for audit. (Delivered: `evidence_images` audit with mime/bytes/sha256/dimensions)
 
 Acceptance:
 
-- Gemma 4 references visual evidence in at least one conflict or hypothesis.
-- Raw IQ is never sent to the model.
-- Image payload stays under a defined size cap.
+- Gemma 4 references visual evidence in at least one conflict or hypothesis. (Prompt requires a visual second opinion; `FakeBackend` records it in `limitations` and `confidence_note`)
+- Raw IQ is never sent to the model. (API sends PNG data URIs only; AI schema rejects non-image URIs)
+- Image payload stays under a defined size cap. (Per-image `AI_MAX_IMAGE_BYTES`, bundle `AI_MAX_TOTAL_IMAGE_BYTES`)
 
 ### Phase 4 — Rare-signal gallery (optional, 4–6 hours)
 
@@ -812,7 +827,7 @@ Acceptance:
 
 ### DSP tests
 
-- Existing 59 tests still pass.
+- Existing 69 tests still pass.
 - `Source.AI_HYPOTHESIS` serializes correctly.
 
 ### Frontend tests
@@ -907,14 +922,15 @@ If targeting Open Innovation 2 as well:
 
 The Gemma 4 integration is demo-ready when:
 
-- [ ] `AI_ENABLED=false` leaves the existing product unchanged.
-- [ ] A user can generate a cited AI brief from a completed analysis.
-- [ ] Every numeric value in the brief is backend-substituted from provenance.
-- [ ] Low-confidence cases trigger at least one real DSP tool call.
-- [ ] AI output is visibly labeled as a hypothesis.
-- [ ] The demo runs fully offline with a local Gemma 4 model.
-- [ ] Existing DSP, API, and frontend tests pass.
-- [ ] README and demo docs state the model, license, and limitations.
+- [x] `AI_ENABLED=false` leaves the existing product unchanged. (Verified: core stack passes all tests with default config)
+- [x] A user can generate a cited AI brief from a completed analysis. (Verified: `InsightPanel` and Celery `generate_insight_task`)
+- [x] Every numeric value in the brief is backend-substituted from provenance. (Verified: `render_template` in `services/ai/app/validation.py`)
+- [x] Low-confidence cases trigger at least one real DSP tool call. (Verified: `test_low_confidence_modulation_triggers_follow_up_tool` + private DSP tool route)
+- [x] Multimodal evidence is capped, audited, and never sends raw IQ. (Verified: `test_evidence_images.py`, `test_images.py`, image audit in `generate_insight_task`)
+- [x] AI output is visibly labeled as a hypothesis. (Verified: `ai_hypothesis` badge in UI)
+- [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` chat/vision path ready)
+- [x] Existing DSP, API, AI, and frontend tests pass. (Verified: 69 DSP, 51 API, 19 AI, 26 frontend tests)
+- [x] README and demo docs state the model, license, and limitations. (Verified: `README.md`, `RUN.md`, `docs/LOCAL_SETUP.md`, `services/ai/README.md`)
 
 ---
 

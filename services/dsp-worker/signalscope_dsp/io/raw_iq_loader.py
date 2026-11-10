@@ -34,6 +34,10 @@ class RawIQFormat:
     signed_offset: bool = True  # for unsigned formats, whether to subtract the midpoint
     sample_rate_hz: Optional[float] = None
     center_frequency_hz: Optional[float] = None
+    # Simultaneous antenna channels in the interleaved stream (frame order:
+    # CH0 I, CH0 Q, CH1 I, CH1 Q, ...). Only used by the "interleaved" layout;
+    # separate_iq / real_only keep exactly one complex channel.
+    channels: int = 1
 
 
 def _read_typed(
@@ -77,12 +81,18 @@ def load_raw_iq(
 
     warnings: list[str] = []
 
+    if fmt.layout != "interleaved" and fmt.channels != 1:
+        raise ValueError("Multi-antenna loading is only implemented for the 'interleaved' layout.")
+    n_ch = max(1, fmt.channels)
+    frame = 2 * n_ch  # complex scalars per frame: CH0-I, CH0-Q, CH1-I, CH1-Q, ...
+
     if fmt.layout == "interleaved":
-        if total_scalars % 2 != 0:
-            warnings.append("Odd number of samples for interleaved I/Q; trailing sample dropped.")
-        total_samples = total_scalars // 2
-        scalar_offset = sample_offset * 2
-        count = -1 if max_samples is None else max_samples * 2
+        if total_scalars % frame != 0:
+            warnings.append(f"Recording length is not a whole number of {n_ch}-channel frames; "
+                            "trailing partial frame dropped.")
+        total_samples = total_scalars // frame
+        scalar_offset = sample_offset * frame
+        count = -1 if max_samples is None else max_samples * frame
     elif fmt.layout == "separate_iq":
         half = total_scalars // 2
         total_samples = half
@@ -122,10 +132,12 @@ def load_raw_iq(
     else:
         offset_bytes = scalar_offset * np.dtype(DTYPE_MAP[fmt.dtype]).itemsize
         raw = _read_typed(path, fmt.dtype, fmt.endian, count=count, offset=offset_bytes)
-        if len(raw) % 2 != 0:
-            raw = raw[:-1]
-        i = raw[0::2]
-        q = raw[1::2]
+        if raw.size % frame != 0:
+            raw = raw[: -(raw.size % frame)]
+        # (N, channels) I and Q columns; columns stay 1-D for channels==1
+        shaped = raw.reshape(-1, frame)
+        i = shaped[:, 0::2].ravel() if n_ch == 1 else shaped[:, 0::2]
+        q = shaped[:, 1::2].ravel() if n_ch == 1 else shaped[:, 1::2]
         is_complex = True
 
     has_quadrature = fmt.layout != "real_only"
@@ -144,6 +156,11 @@ def load_raw_iq(
             q = q.astype(np.float64) if has_quadrature else np.zeros_like(i)
 
     complex_samples = (i + 1j * q).astype(np.complex64)
+    if n_ch > 1:
+        primary = complex_samples[:, 0]
+        others = tuple(complex_samples[:, c] for c in range(1, n_ch))
+    else:
+        primary, others = complex_samples, ()
 
     if fmt.sample_rate_hz:
         sr_est = Estimate(
@@ -178,15 +195,16 @@ def load_raw_iq(
         sample_rate=sr_est,
         center_frequency=cf_est,
         is_complex=is_complex,
-        channel_count=1,
+        channel_count=n_ch,
         sample_dtype=fmt.dtype,
         duration_seconds=(total_samples / fmt.sample_rate_hz) if fmt.sample_rate_hz else None,
         total_samples=total_samples,
         extra={
             "layout": fmt.layout,
             "endian": fmt.endian,
+            "channels": n_ch,
             "warnings": warnings,
-            "loaded_samples": len(complex_samples),
+            "loaded_samples": len(primary),
         },
     )
-    return Recording(samples=complex_samples, metadata=metadata, source_path=str(path))
+    return Recording(samples=primary, metadata=metadata, source_path=str(path), other_channels=others)

@@ -105,6 +105,7 @@ class AnalysisProject(Base):
     creator = relationship("User", back_populates="projects")
     parameters = relationship("ParameterEstimate", back_populates="project", lazy="selectin")
     artifacts = relationship("Artifact", back_populates="project", lazy="selectin")
+    insights = relationship("AnalysisInsight", back_populates="project", lazy="selectin")
 
 
 class ParameterEstimate(Base):
@@ -123,6 +124,27 @@ class ParameterEstimate(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
     project = relationship("AnalysisProject", back_populates="parameters")
+
+
+class AnalysisInsight(Base):
+    __tablename__ = "analysis_insights"
+
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("analysis_projects.id"), nullable=False, index=True
+    )
+    model_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    prompt_version: Mapped[str] = mapped_column(String(40), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="queued", index=True)
+    response_json: Mapped[dict | None] = mapped_column(JSON)
+    tool_trace_json: Mapped[list | None] = mapped_column(JSON)
+    citations_json: Mapped[dict | None] = mapped_column(JSON)
+    error_message: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    project = relationship("AnalysisProject", back_populates="insights")
+
+    __table_args__ = (Index("ix_analysis_insights_project_created", "project_id", "created_at"),)
 
 
 class Artifact(Base):
