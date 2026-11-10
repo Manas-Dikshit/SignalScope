@@ -316,6 +316,7 @@ async def deep_analysis(
 
     loader = rec.file_format
     params: dict = {}
+    baseline_m = None
     if meta and meta.raw_metadata_json:
         if loader == "raw_iq":
             params = {
@@ -324,7 +325,9 @@ async def deep_analysis(
                 "endian": meta.endian or "little",
                 "sample_rate_hz": meta.sample_rate,
                 "center_frequency_hz": meta.center_frequency,
+                "channels": meta.raw_metadata_json.get("channels", 1),
             }
+            baseline_m = meta.raw_metadata_json.get("baseline_m")
         elif loader == "wav":
             params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
 
