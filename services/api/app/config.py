@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     # route, so an accidentally exposed API cannot run analysis for anyone.
     INTERNAL_API_TOKEN: str = ""
 
+    # Phase 3 multimodal evidence. Rendered PNGs only; raw IQ never leaves the
+    # API/worker container. Caps are enforced per image and across the bundle.
+    AI_EVIDENCE_IMAGES_ENABLED: bool = True
+    AI_MAX_IMAGE_BYTES: int = 300_000
+    AI_MAX_TOTAL_IMAGE_BYTES: int = 1_000_000
+
     # `CORS_ORIGINS` is a string env var (comma-separated or JSON array).
     # Kept as `str` so pydantic-settings doesn't force JSON decoding of
     # complex-typed env vars across versions.

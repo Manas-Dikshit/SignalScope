@@ -277,9 +277,37 @@ def generate_insight_task(self, project_id_str: str):
             "prompt_version": settings.AI_PROMPT_VERSION,
         }
 
+        _update_progress(self, "rendering_images", 45)
+        images: dict[str, str] = {}
+        if settings.AI_EVIDENCE_IMAGES_ENABLED:
+            from .dsp_io import load_project_samples
+            from .evidence_images import render_evidence_images
+
+            estimate_map = {str(e.get("name")): e for e in estimates if e.get("name")}
+            modulation = (estimate_map.get("modulation") or {}).get("value")
+            symbol_rate = (estimate_map.get("symbol_rate") or {}).get("value")
+            try:
+                samples, sample_rate = load_project_samples(project, rec, meta)
+                bundle = render_evidence_images(
+                    samples,
+                    sample_rate,
+                    modulation=str(modulation) if modulation else None,
+                    symbol_rate=float(symbol_rate) if symbol_rate else None,
+                    max_image_bytes=settings.AI_MAX_IMAGE_BYTES,
+                    max_total_bytes=settings.AI_MAX_TOTAL_IMAGE_BYTES,
+                )
+                images = bundle.images
+                evidence["evidence_images"] = bundle.audit
+                evidence["image_total_bytes"] = bundle.total_bytes
+            except Exception as exc:
+                # Images are a bonus, never a prerequisite for the brief.
+                evidence["evidence_images"] = {
+                    "error": f"image rendering skipped: {exc}"
+                }
+
         _update_progress(self, "requesting_ai", 60)
         try:
-            response = request_insight_sync(project_id_str, evidence)
+            response = request_insight_sync(project_id_str, evidence, images)
             insight = AnalysisInsight(
                 project_id=project_id,
                 model_name=str(response.get("model_name") or settings.AI_MODEL),

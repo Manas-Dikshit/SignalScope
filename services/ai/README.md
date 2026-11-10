@@ -32,6 +32,26 @@ The Transformers path is a scaffold for Phase 0/1. The tool-calling loop and
 image rendering are added in later phases of
 `docs/GEMMA4_IMPLEMENTATION_PLAN.md`.
 
+## Phase 2 tool loop
+
+The analyst may call four allowlisted DSP tools:
+
+| Tool | Purpose |
+|---|---|
+| `get_project_evidence` | Re-read stored estimates and recording metadata |
+| `run_deep_analysis` | Re-run PSD/features/modulation/demod/FEC over the ROI |
+| `try_demodulation` | Try a specific PSK/QAM/FSK order |
+| `try_fec` | Try a specific FEC decoder and report convergence/CRC |
+
+Tool calls are bounded by `AI_MAX_TOOL_STEPS` (default 6) and per-call
+`AI_TOOL_TIMEOUT_SECONDS` (default 30). Dispatch only POSTs to the API's private
+`/internal/dsp-tools/{tool_name}` route with `X-Internal-Token`; the model can
+never choose a URL or execute code.
+
+Set the same `INTERNAL_API_TOKEN` on the `api` and `ai` services. An empty token
+disables the private route. Tool results are persisted in
+`analysis_insights.tool_trace_json` and rendered by `InsightPanel`.
+
 ## Contract
 
 `POST /v1/insight`

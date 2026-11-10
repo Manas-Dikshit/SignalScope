@@ -106,6 +106,20 @@ def deterministic_payload(evidence: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _with_visual_note(payload: dict[str, Any], images: dict[str, str] | None) -> dict[str, Any]:
+    if not images:
+        return payload
+    payload = dict(payload)
+    payload["limitations"] = list(payload.get("limitations", [])) + [
+        "Visual second opinion reviewed: " + ", ".join(sorted(images)) + "."
+    ]
+    hypothesis = dict(payload.get("hypothesis") or {})
+    note = str(hypothesis.get("confidence_note") or "").strip()
+    hypothesis["confidence_note"] = (note + " Visual evidence reviewed.").strip()
+    payload["hypothesis"] = hypothesis
+    return payload
+
+
 def _tool_was_called(messages: list[dict[str, Any]], name: str | None = None) -> bool:
     for message in messages:
         if message.get("role") != "tool":
@@ -176,10 +190,12 @@ class FakeBackend:
                     ]
                 }
 
-        return {"content": deterministic_payload(evidence)}
+        return {"content": _with_visual_note(deterministic_payload(evidence), request.images)}
 
     def generate(self, request: InsightRequest) -> dict[str, Any]:
-        return deterministic_payload(request.evidence or {})
+        return _with_visual_note(
+            deterministic_payload(request.evidence or {}), request.images
+        )
 
 
 class TransformersBackend:

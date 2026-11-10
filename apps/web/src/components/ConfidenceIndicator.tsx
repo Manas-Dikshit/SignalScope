@@ -257,6 +257,7 @@ function SourceChip({ source }: { source: Source }) {
     measured:      { label: "measured", color: "bg-confidence-high/10 text-confidence-high" },
     estimated:     { label: "estimated", color: "bg-secondary/10 text-secondary" },
     hypothesis:    { label: "hypothesis", color: "bg-muted-foreground/10 text-muted-foreground" },
+    ai_hypothesis: { label: "ai hypothesis", color: "bg-purple-500/15 text-purple-400" },
     unknown:       { label: "unknown", color: "bg-muted text-muted-foreground" },
   };
   const c = config[source] ?? config.unknown;

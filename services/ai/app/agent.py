@@ -11,7 +11,7 @@ from .schemas import InsightRequest, InsightResponse
 from .tools import TOOL_SCHEMAS, dispatch_tool, parse_tool_call
 from .validation import render_template, validate_insight
 
-MAX_STEPS = 6
+MAX_STEPS = settings.AI_MAX_TOOL_STEPS
 MAX_TOOL_CALLS = 8
 
 Dispatcher = Callable[[dict[str, Any], str], dict[str, Any]]

@@ -128,8 +128,9 @@ See [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md) for a full walkthrough.
 | Suite | Command | Scope |
 |-------|---------|-------|
 | DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | 59 tests - loading, modulation/demodulation BER, FEC (convolutional, Reed-Solomon, LDPC, concatenated), de-interleaving (incl. diagonal + pseudo-random), proof spectra, kHz-GHz band coverage, bounded-window loading |
-| API | `cd services/api && python -m pytest tests/ -q` | 32 tests — auth, upload, projects, jobs, isolation, evidence-proof payloads, FEC-type dispatch |
-| Frontend | `cd apps/web && npm test` | Vitest + RTL — provenance badge, file-format inference, proof summarization, frequency formatting |
+| API | `cd services/api && python -m pytest tests/ -q` | 46 tests - auth, upload, projects, jobs, isolation, evidence-proof payloads, FEC-type dispatch, private DSP tool route |
+| AI sidecar | `cd services/ai && python -m pytest tests/ -q` | 14 tests - cited brief, placeholder substitution, tool allowlist, low-confidence follow-up, max-step limit, timeout/error handling |
+| Frontend | `cd apps/web && npm test` | Vitest + RTL - provenance badge, file-format inference, proof summarization, frequency formatting |
 
 Together they verify: WAV/raw-IQ/SigMF loading, convolutional-encode/Viterbi-decode round trips, CRC, de-interleaving, bit correlation, `generate + demodulate` BER for BPSK/QPSK/16-QAM/2-FSK, modulation classification, symbol-rate estimation — plus full API behavior and cross-user data isolation.
 

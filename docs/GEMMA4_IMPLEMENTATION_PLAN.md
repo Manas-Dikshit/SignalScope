@@ -650,10 +650,12 @@ Add to `.env.example`:
 AI_ENABLED=false
 AI_SERVICE_URL=http://ai:8100
 AI_MODEL=google/gemma-4-E4B-it
-AI_BACKEND=transformers
+AI_BACKEND=fake            # fake | transformers
 AI_TIMEOUT_SECONDS=120
 AI_MAX_TOOL_STEPS=6
-INTERNAL_API_TOKEN=change-me
+AI_TOOL_TIMEOUT_SECONDS=30
+API_INTERNAL_URL=http://api:8000
+INTERNAL_API_TOKEN=change-me   # empty disables the private tool route
 ```
 
 ### 14.2 Compose service
@@ -734,23 +736,23 @@ Acceptance:
 - Invalid model output falls back safely. (Verified: fallback on parse/validation error)
 - UI clearly marks the brief as AI-generated. (Verified: `ai_hypothesis` provenance badge)
 
-### Phase 2 — Agent tools (5–6 hours)
+### Phase 2 - Agent tools (5-6 hours) - [COMPLETE]
 
 Tasks:
 
-- [ ] Add tool schemas and allowlist dispatch.
-- [ ] Implement `get_project_evidence`.
-- [ ] Implement `run_deep_analysis`.
-- [ ] Implement `try_demodulation`.
-- [ ] Implement `try_fec`.
-- [ ] Add max-step limit and per-tool timeout.
-- [ ] Store `tool_trace_json`.
+- [x] Add tool schemas and allowlist dispatch. (Delivered: `services/ai/app/tools.py`, `TOOL_SCHEMAS` + `dispatch_tool`)
+- [x] Implement `get_project_evidence`. (Delivered: `services/api/app/routers/internal_tools.py`)
+- [x] Implement `run_deep_analysis`. (Delivered: internal route reuses the public deep-analysis pipeline)
+- [x] Implement `try_demodulation`. (Delivered: PSK/QAM/FSK dispatch with soft-margin proxy)
+- [x] Implement `try_fec`. (Delivered: Viterbi/RS/LDPC/concatenated verdicts)
+- [x] Add max-step limit and per-tool timeout. (Delivered: `AI_MAX_TOOL_STEPS`, `AI_TOOL_TIMEOUT_SECONDS`)
+- [x] Store `tool_trace_json`. (Delivered: agent loop -> response -> Celery task -> DB -> `InsightPanel`)
 
 Acceptance:
 
-- Low-confidence modulation triggers at least one follow-up tool call.
-- Tool trace is visible in the UI.
-- No arbitrary code execution path exists.
+- Low-confidence modulation triggers at least one follow-up tool call. (Verified: `test_low_confidence_modulation_triggers_follow_up_tool`)
+- Tool trace is visible in the UI. (Verified: `InsightPanel` tool-trace section)
+- No arbitrary code execution path exists. (Verified: fixed handler map + shared-secret route)
 
 ### Phase 3 — Multimodal evidence (3–4 hours)
 
@@ -923,10 +925,10 @@ The Gemma 4 integration is demo-ready when:
 - [x] `AI_ENABLED=false` leaves the existing product unchanged. (Verified: core stack passes all tests with default config)
 - [x] A user can generate a cited AI brief from a completed analysis. (Verified: `InsightPanel` and Celery `generate_insight_task`)
 - [x] Every numeric value in the brief is backend-substituted from provenance. (Verified: `render_template` in `services/ai/app/validation.py`)
-- [ ] Low-confidence cases trigger at least one real DSP tool call. (Phase 2 target)
+- [x] Low-confidence cases trigger at least one real DSP tool call. (Verified: `test_low_confidence_modulation_triggers_follow_up_tool` + private DSP tool route)
 - [x] AI output is visibly labeled as a hypothesis. (Verified: `ai_hypothesis` badge in UI)
-- [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` scaffold ready)
-- [x] Existing DSP, API, and frontend tests pass. (Verified: 55 DSP tests, 34 API tests, 26 frontend tests all pass)
+- [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` chat/vision path ready)
+- [x] Existing DSP, API, and frontend tests pass. (Verified: 59 DSP, 46 API, 14 AI, 26 frontend tests all pass)
 - [ ] README and demo docs state the model, license, and limitations. (Phase 2/3 target)
 
 ---

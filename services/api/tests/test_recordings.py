@@ -180,6 +180,7 @@ async def test_get_recording(client: AsyncClient, auth_headers: dict):
         files={"file": ("get_test.wav", wav_bytes, "audio/wav")},
         data={"loader": "wav"},
     )
+    assert upload_resp.status_code == 201, upload_resp.text
     rec_id = upload_resp.json()["id"]
 
     resp = await client.get(f"/api/recordings/{rec_id}", headers=auth_headers)

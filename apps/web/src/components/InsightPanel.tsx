@@ -236,6 +236,36 @@ export function InsightPanel({ projectId }: { projectId: string }) {
                 </ul>
               </div>
             )}
+
+            {payload?.tool_trace && payload.tool_trace.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Tool trace
+                </div>
+                <ul className="space-y-1 text-xs font-mono text-muted-foreground">
+                  {payload.tool_trace.map((entry, i) => {
+                    const tool = typeof entry.tool === "string" ? entry.tool : "unknown";
+                    const args = entry.arguments ? JSON.stringify(entry.arguments) : "{}";
+                    const result = entry.result;
+                    const ok =
+                      typeof result === "object" &&
+                      result !== null &&
+                      "ok" in result
+                        ? Boolean((result as Record<string, unknown>).ok)
+                        : true;
+                    return (
+                      <li key={i} className="flex flex-wrap items-baseline gap-1">
+                        <span className={ok ? "text-confidence-high" : "text-warning"}>
+                          {ok ? "ok" : "failed"}
+                        </span>
+                        <span className="text-foreground">{tool}</span>
+                        <span className="break-all">{args}</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

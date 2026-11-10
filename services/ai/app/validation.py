@@ -29,7 +29,10 @@ def _format_value(value: Any, unit: str | None = None) -> str:
     if value is None:
         return "unknown"
     if isinstance(value, float):
-        text = f"{value:,.4g}"
+        if abs(value) >= 1000:
+            text = f"{value:,.1f}".rstrip("0").rstrip(".")
+        else:
+            text = f"{value:,.4g}"
     else:
         text = str(value)
     return f"{text} {unit}".strip() if unit else text

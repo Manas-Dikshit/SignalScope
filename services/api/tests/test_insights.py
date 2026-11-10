@@ -107,9 +107,12 @@ async def test_insights_generate_and_store(client: AsyncClient, auth_headers: di
     project_id = await _create_project(client, auth_headers)
 
     calls: list[str] = []
+    captured: dict = {}
 
     def fake_request(pid: str, evidence: dict, images=None) -> dict:
         calls.append(pid)
+        captured["images"] = images
+        captured["evidence"] = evidence
         return _fake_response(pid)
 
     monkeypatch.setattr("app.ai_client.request_insight_sync", fake_request)
@@ -117,6 +120,16 @@ async def test_insights_generate_and_store(client: AsyncClient, auth_headers: di
     resp = await client.post(f"/api/projects/{project_id}/insights", headers=auth_headers)
     assert resp.status_code == 202
     assert calls == [project_id]
+
+    # Phase 3: the worker renders capped PNG data URIs and sends the audit
+    # metadata with the evidence bundle. Raw IQ is never in the payload.
+    assert captured["images"], "expected rendered evidence images"
+    for data_uri in captured["images"].values():
+        assert data_uri.startswith("data:image/png;base64,")
+    audit = captured["evidence"]["evidence_images"]
+    assert "psd.png" in audit
+    assert "sha256" in audit["psd.png"]
+    assert "samples" not in audit["psd.png"]
 
     latest = await client.get(f"/api/projects/{project_id}/insights", headers=auth_headers)
     assert latest.status_code == 200

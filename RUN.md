@@ -1,6 +1,6 @@
 # RUN.md — Run SignalScope AI (everything)
 
-Verified against the current repo: **API tests (32) ✅, DSP tests (59) ✅,
+Verified against the current repo: **API tests (46) ✅, DSP tests (59) ✅,
 frontend tests (26) ✅, frontend build ✅, full Docker stack (postgres + redis +
 api + worker + web) all healthy ✅.**
 
@@ -113,7 +113,7 @@ URLs: web http://localhost:3000, API http://localhost:8000/docs.
 Run the three test suites (any order). Each in its own terminal if you want
 them parallel.
 
-### Terminal A — backend API tests (32)
+### Terminal A — backend API tests (46)
 
 ```powershell
 cd services/api
@@ -134,6 +134,13 @@ cd apps/web
 npm install
 npm test      # vitest run
 npm run build # next build (also type-checks)
+```
+
+### Terminal D - AI sidecar tests (14)
+
+```powershell
+cd services/ai
+python -m pytest tests/ -q
 ```
 
 ---

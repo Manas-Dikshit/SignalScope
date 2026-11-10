@@ -19,12 +19,18 @@ class AISettings(BaseSettings):
     AI_ENABLE_THINKING: bool = False
     AI_MAX_NEW_TOKENS: int = 1024
     AI_PROMPT_VERSION: str = "2026-11-01"
+    AI_MAX_TOOL_STEPS: int = 6
 
     # Private API route that executes allowlisted DSP tools. The AI service never
     # touches the database or recording volume directly.
     API_INTERNAL_URL: str = "http://api:8000"
     INTERNAL_API_TOKEN: str = ""
     AI_TOOL_TIMEOUT_SECONDS: float = 30.0
+
+    # Multimodal evidence arrives as base64 PNG data URIs. The sidecar refuses
+    # anything that is not an image or that exceeds these caps.
+    AI_MAX_IMAGE_BYTES: int = 300_000
+    AI_MAX_TOTAL_IMAGE_BYTES: int = 1_000_000
 
 
 settings = AISettings()
