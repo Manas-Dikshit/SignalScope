@@ -95,33 +95,36 @@ You need a reachable PostgreSQL and Redis first.
 ```bash
 # 1. Backend environment
 cd services/api
-python -m venv .venv && . .venv/bin/activate    # Windows: .venv\Scripts\Activate.ps1
+python -m venv .venv
+# Linux/macOS:
+source .venv/bin/activate
+# Windows PowerShell:
+# .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 pip install -e ../dsp-worker
 
-# 2. Env (edit to point at your Postgres/Redis)
-set DATABASE_URL=postgresql+asyncpg://signalscope:signalscope@localhost:5432/signalscope
-set DATABASE_URL_SYNC=postgresql://signalscope:signalscope@localhost:5432/signalscope
-set REDIS_URL=redis://localhost:6379/0
-set CELERY_BROKER_URL=redis://localhost:6379/1
-set CELERY_RESULT_BACKEND=redis://localhost:6379/2
-set DATA_DIR=./data
-set SECRET_KEY=some-long-random-hex
-set CORS_ORIGINS=http://localhost:3000
+# 2. Create services/api/.env with your local URLs (Pydantic reads it):
+#    DATABASE_URL=postgresql+asyncpg://signalscope:signalscope@localhost:5432/signalscope
+#    DATABASE_URL_SYNC=postgresql://signalscope:signalscope@localhost:5432/signalscope
+#    REDIS_URL=redis://localhost:6379/0
+#    CELERY_BROKER_URL=redis://localhost:6379/1
+#    CELERY_RESULT_BACKEND=redis://localhost:6379/2
+#    DATA_DIR=./data
+#    SECRET_KEY=<random hex>
+#    CORS_ORIGINS=http://localhost:3000
 
 # 3. Create the schema + run the API
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 
-# 4. In another terminal: the worker (needed for DSP and insight jobs)
+# 4. In another terminal: the worker (same venv, needed for DSP/insight jobs)
 cd services/api
-. .venv/bin/activate
 celery -A app.tasks worker --loglevel=info --concurrency=2
 
-# 5. Frontend
+# 5. Frontend in a third terminal
 cd apps/web
 npm install
-cp .env.example .env.local
+cp .env.example .env.local      # Windows: copy .env.example .env.local
 npm run dev
 ```
 
@@ -130,15 +133,16 @@ npm run dev
 ## Configuration reference
 
 Backend settings live in `services/api/app/config.py` and are overridable with
-environment variables (or `.env`).
+environment variables (or `.env`). The defaults below match `.env.example` /
+Docker Compose; running natively, point the URLs at `localhost`.
 
 ### Core
 
-| Variable | Default | Purpose |
+| Variable | Default (Compose) | Purpose |
 |---|---|---|
 | `DATABASE_URL` | `postgresql+asyncpg://...` | Async SQLAlchemy URL |
 | `DATABASE_URL_SYNC` | `postgresql://...` | Sync URL (worker DB access) |
-| `REDIS_URL` | `redis://redis:6379/0` | App Redis (rate limits, cache) |
+| `REDIS_URL` | `redis://redis:6379/0` | App Redis URL (db 0; currently unused) |
 | `CELERY_BROKER_URL` | `redis://redis:6379/1` | Celery task broker |
 | `CELERY_RESULT_BACKEND` | `redis://redis:6379/2` | Celery result backend |
 | `DATA_DIR` | `/data` | Upload + working files |

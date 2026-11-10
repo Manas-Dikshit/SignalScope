@@ -80,7 +80,7 @@ flowchart TB
 
     subgraph AI["Optional · Gemma 4 sidecar"]
         direction LR
-        M["Local model<br/><span style='opacity:.75;font-size:12px'>fake · transformers · GGUF/Ollama-class</span>"]
+        M["Local model<br/><span style='opacity:.75;font-size:12px'>fake · transformers</span>"]
         L["Agent loop<br/><span style='opacity:.75;font-size:12px'>allowlisted tools · max steps · timeout</span>"]
         V["Validation<br/><span style='opacity:.75;font-size:12px'>schema · citations · numeric guard</span>"]
         M --- L --- V
@@ -89,7 +89,7 @@ flowchart TB
     subgraph DATA["Data"]
         direction LR
         P["PostgreSQL 16<br/><span style='opacity:.75;font-size:12px'>users · recordings · projects · jobs ·<br/>parameter_estimates · analysis_insights</span>"]
-        R["Redis 7<br/><span style='opacity:.75;font-size:12px'>rate limits · Celery broker · result backend</span>"]
+        R["Redis 7<br/><span style='opacity:.75;font-size:12px'>Celery broker · result backend</span>"]
         D["Upload volume<br/><span style='opacity:.75;font-size:12px'>raw RF files on disk</span>"]
     end
 
@@ -176,7 +176,7 @@ Every stage emits candidates with **evidence strings**. The final `Estimate` car
 ### 5. AI layer (optional)
 
 - `services/ai` is a separate FastAPI service on port `8100`, started with the `ai` Compose profile.
-- Backends: deterministic `fake` (no model download), `transformers` (local Gemma 4), and a scaffold for GGUF/Ollama-class local runtimes.
+- Backends: deterministic `fake` (no model download) and `transformers` (local Gemma 4). Other local runtimes (GGUF/Ollama-class) can be added behind the same `InsightBackend` protocol.
 - Default model: `google/gemma-4-E4B-it` (Apache-2.0).
 - Rendered evidence images (PSD, waterfall, constellation, M-th power) are generated with Pillow and sent as bounded PNG data URIs; raw I/Q is never sent.
 - The model may call only: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`.
@@ -186,7 +186,7 @@ Every stage emits candidates with **evidence strings**. The final `Estimate` car
 ### 6. Data layer
 
 - **PostgreSQL 16** — users, recordings, metadata, projects, jobs, parameter estimates (`value_json` + `evidence_json`), and analysis insights (`response_json`, `tool_trace_json`, `citations_json`).
-- **Redis db 0** — rate-limit counters and app cache.
+- **Redis db 0** — configured via `REDIS_URL` for app cache (currently unused).
 - **Redis db 1** — Celery broker.
 - **Redis db 2** — Celery result backend and job status.
 - **Upload volume** — raw RF files on disk, referenced from the database and never held in memory beyond a bounded window.
@@ -263,7 +263,7 @@ sequenceDiagram
 | Worker down | Jobs remain queued; the UI keeps polling and surfaces the state instead of hanging. |
 | AI down or invalid | DSP results are untouched; the insight row records the error and the UI shows an explicit fallback. |
 | Cross-user access | Every project, recording, job, and insight route checks ownership. |
-| Rate limiting | Redis-backed limits on login and upload paths. |
+| Rate limiting | In-process fixed-window limits per client IP: login 10/min, upload 30/min. |
 | Secrets | `SECRET_KEY` must be overridden; `INTERNAL_API_TOKEN` gates the private DSP tool route. |
 | AI numeric honesty | Numbers in the brief are backend-substituted from provenance; the model never writes authoritative values. |
 

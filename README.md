@@ -16,7 +16,7 @@ Turn authorized WAV, raw I/Q, and SigMF recordings into provenance-tracked estim
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](./services/api/requirements.txt)
 [![Docker](https://img.shields.io/badge/Docker%20Compose-ready-2496ED?style=flat-square&logo=docker&logoColor=white)](./docker-compose.yml)
 
-[Quick start](#-quick-start) · [Features](#-what-you-get) · [Architecture](#-architecture) · [Gemma 4 analyst](#-gemma-4-ai-analyst-optional) · [API](#-api-surface) · [Testing](#-testing) · [Docs](#-documentation-map)
+[Quick start](#quick-start) · [Features](#what-you-get) · [Architecture](#architecture) · [Gemma 4 analyst](#gemma-4-ai-analyst-optional) · [API](#api-surface) · [Testing](#testing) · [Docs](#documentation-map)
 
 </div>
 
@@ -29,7 +29,7 @@ Turn authorized WAV, raw I/Q, and SigMF recordings into provenance-tracked estim
 
 Most signal analyzers print one number and call it truth. SignalScope treats every parameter as an **estimate with provenance**:
 
-| | |
+| Principle | What it means |
 |---|---|
 | **Explainable by default** | Every estimate carries `source`, `confidence`, `evidence`, `alternatives`, and `warnings`. |
 | **Offline and private** | The full DSP pipeline runs locally. Recordings never leave your machine. |
@@ -74,13 +74,13 @@ Most signal analyzers print one number and call it truth. SignalScope treats eve
 
 **Frontend** · Next.js 14 · React 18 · TypeScript 5 · Tailwind CSS · shadcn/ui · TanStack Query · Zustand · Plotly.js · Vitest + Testing Library
 
-**Backend** · FastAPI 0.115 · Pydantic v2 · SQLAlchemy 2.0 async · Alembic · Celery 5.5 · JWT httpOnly cookies · Argon2 · Redis rate limiting
+**Backend** · FastAPI 0.115 · Pydantic v2 · SQLAlchemy 2.0 async · Alembic · Celery 5.5 · JWT httpOnly cookies · Argon2 · in-process per-IP rate limits
 
 **Data** · PostgreSQL 16 · Redis 7 · Docker volumes for raw recordings
 
 **DSP** · NumPy 2.2 · SciPy 1.15 · Pillow (evidence PNGs) · Pytest
 
-**AI (optional)** · Gemma 4 E4B via Transformers, fake offline backend, or GGUF/Ollama-class local runtime
+**AI (optional)** · Gemma 4 E4B via Transformers or a deterministic offline fake backend
 
 ---
 
@@ -239,7 +239,14 @@ Every estimate is an object, never a bare number:
     "agrees within 1.2% of candidate from zero-crossing analysis"
   ],
   "alternatives": [
-    { "value": 256000.0, "evidence": ["second harmonic candidate"] }
+    {
+      "name": "symbol_rate",
+      "value": 256000.0,
+      "unit": "symbols/s",
+      "source": "hypothesis",
+      "confidence": 0.41,
+      "evidence": ["second harmonic candidate"]
+    }
   ],
   "warnings": []
 }
@@ -288,11 +295,14 @@ All four suites:
 
 Coverage includes WAV/raw-IQ/SigMF loading, bounded windows, dual-antenna frames, interferometric origin verdicts, modulation/demodulation BER round trips, symbol-rate estimation, de-interleaving, convolutional/Reed–Solomon/LDPC/concatenated FEC, CRC, proof spectra, kHz–GHz band coverage, auth, uploads, projects, jobs, cross-user isolation, demo samples, evidence images, AI validation/tool-loop behavior, provenance badges, and formatting utilities.
 
-Run everything from Docker:
+Run the API suite inside Docker:
 
 ```bash
 make test
 ```
+
+The DSP, AI, and frontend suites run natively with the commands above (the web
+image ships no dev toolchain).
 
 ---
 
@@ -305,7 +315,7 @@ SignalScope/
 │   ├── api/                   # FastAPI routers, Celery tasks, Alembic migrations
 │   ├── dsp-worker/            # signalscope_dsp: loaders, DSP stages, FEC, provenance
 │   └── ai/                    # Optional Gemma 4 sidecar (FastAPI)
-├── docker/                    # Dockerfiles for web, api, worker, ai
+├── docker/                    # Dockerfiles for web, api, worker (ai image lives in services/ai)
 ├── docs/                      # Setup, architecture, design, traceability, Gemma plan
 ├── samples/                   # Committed test/demo recordings
 ├── scripts/                   # Sample generator, smoke test, AI pipeline verification
@@ -325,7 +335,7 @@ SignalScope/
 - No geolocation or direction finding. Interferometric origin answers only *sky vs local/inconclusive*; a bearing needs a user-supplied baseline and remains an estimate.
 - No decryption of protected communications — authorized recordings only.
 - Demodulators sample symbol centers directly; no closed-loop Costas/PLL or Gardner/M&M timing recovery yet.
-- FEC defaults to rate-1/2 convolutional/Viterbi (hard decision). Reed–Solomon, LDPC, and concatenated codes are selectable in deep analysis; soft-decision LLR decoding is future work.
+- FEC defaults to rate-1/2 convolutional/Viterbi (hard decision). Reed–Solomon (with erasures), LDPC (min-sum belief propagation, accepts soft LLRs), and concatenated codes are selectable in deep analysis; soft-decision Viterbi is future work.
 - Interferometric delay is resolvable only within half the analyzed band; wider delays can alias.
 - API tests run against SQLite for speed; the Postgres path is exercised by Docker deployment.
 - The AI sidecar is an analyst assistant, not an authority. It never replaces deterministic DSP and is disabled by default.

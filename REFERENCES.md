@@ -32,8 +32,8 @@ implementation. Grouped by area; kept to what's necessary, not exhaustive.
 ## Error-correction coding (FEC)
 - **CCSDS 131.0-B TM Synchronization and Channel Coding (Blue Book)** —
   defines the rate-1/2, K=7, generator-polynomial (171,133)₈ convolutional
-  code used as this project's default; also the standard reference for
-  Reed-Solomon and concatenated-code parameters in the next FEC phase.
+  code used as this project's default; also the standard reference for the
+  Reed–Solomon and concatenated-code parameters implemented in `fec/`.
   https://public.ccsds.org/Pubs/131x0b5.pdf
 - **Viterbi algorithm** (background for `viterbi_decode`).
   https://en.wikipedia.org/wiki/Viterbi_algorithm

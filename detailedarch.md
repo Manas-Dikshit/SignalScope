@@ -17,7 +17,7 @@
 | `worker` | Celery 5.5 · `signalscope_dsp` (editable) | — | Background executor for DSP and insight tasks |
 | `ai` *(optional)* | FastAPI · Gemma 4 | `8100` | Cited analyst brief, allowlisted DSP tools, evidence-image validation |
 | `postgres` | PostgreSQL 16 | `5432` | Primary relational store |
-| `redis` | Redis 7 | `6379` | db0 rate-limit/cache · db1 Celery broker · db2 result backend |
+| `redis` | Redis 7 | `6379` | db0 app cache (configured, unused) · db1 Celery broker · db2 result backend |
 | `uploads_data` | Docker volume | — | Raw RF recordings on disk (never in memory) |
 | `ai_models` | Docker volume | — | Optional local Gemma 4 weights / HF cache |
 
@@ -61,7 +61,7 @@ flowchart TB
         direction TB
         ROUTERS["Routers<br/><span style='opacity:.75;font-size:11px'>auth · uploads · recordings · projects · jobs · insights · dashboard</span>"]
         AUTH["Auth<br/><span style='opacity:.75;font-size:11px'>JWT httpOnly cookie · python-jose · passlib/argon2</span>"]
-        RATE["Rate limiting<br/><span style='opacity:.75;font-size:11px'>login 10/min · upload 30/min (Redis db0)</span>"]
+        RATE["Rate limiting<br/><span style='opacity:.75;font-size:11px'>login 10/min · upload 30/min (in-process per IP)</span>"]
         VALID["Upload validation<br/><span style='opacity:.75;font-size:11px'>WAV · raw-IQ · SigMF · 200 MB cap · SHA-256 · duplicate check</span>"]
         SCH["Pydantic v2 schemas<br/><span style='opacity:.75;font-size:11px'>request/response contracts</span>"]
         TOOLS["Private DSP tools<br/><span style='opacity:.75;font-size:11px'>/internal/dsp-tools/{tool} · X-Internal-Token</span>"]
@@ -112,7 +112,7 @@ flowchart TB
 
     subgraph AI["Optional AI — Gemma 4 sidecar · Docker :8100"]
         direction LR
-        MODEL["Local model<br/><span style='opacity:.75;font-size:11px'>fake · transformers · GGUF/Ollama-class</span>"]
+        MODEL["Local model<br/><span style='opacity:.75;font-size:11px'>fake · transformers</span>"]
         LOOP["Agent loop<br/><span style='opacity:.75;font-size:11px'>max steps · tool timeout · trace</span>"]
         VALIDATE["Validation<br/><span style='opacity:.75;font-size:11px'>schema · citations · numeric guard</span>"]
         MODEL --> LOOP --> VALIDATE
@@ -124,7 +124,7 @@ flowchart TB
             TBLS["Tables<br/><span style='opacity:.75;font-size:11px'>users · projects · recordings · jobs<br/>parameter_estimates (value_json + evidence_json)<br/>analysis_insights (response/tool_trace/citations)</span>"]
         end
         subgraph RD["Redis 7 · :6379"]
-            D0["db0 — rate limits / cache"]
+            D0["db0 - app cache (configured, unused)"]
             D1["db1 — Celery broker (queue)"]
             D2["db2 — Celery result backend<br/><span style='opacity:.75;font-size:11px'>job status</span>"]
         end
@@ -148,7 +148,6 @@ flowchart TB
     ROUTERS -->|"job status lookup"| D2
     ROUTERS -->|"GET /projects/{id}/analysis?fec_type=…"| ORM
     ORM --> TBLS
-    ROUTERS -->|"rate limit counters"| D0
     ROUTERS -->|"⑧ previews / uploads"| VOL
     ROUTERS -.->|"⑨ optional POST /insights"| INS
     INS -->|"⑩ evidence bundle + PNGs"| IMG
