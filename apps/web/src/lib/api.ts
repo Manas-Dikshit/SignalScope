@@ -10,6 +10,7 @@ import type {
   DeepAnalysis,
   BurstDetection,
   DemoSampleItem,
+  AnalysisInsight,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -147,6 +148,14 @@ export const projectsApi = {
 
 export const jobsApi = {
   get: (id: string) => request<Job>(`/api/jobs/${id}`),
+};
+
+export const insightsApi = {
+  generate: (projectId: string) =>
+    request<Job>(`/api/projects/${projectId}/insights`, { method: "POST" }),
+
+  latest: (projectId: string) =>
+    request<AnalysisInsight>(`/api/projects/${projectId}/insights`),
 };
 
 export const dashboardApi = {

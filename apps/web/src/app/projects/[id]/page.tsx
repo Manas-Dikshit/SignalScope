@@ -16,6 +16,7 @@ import { ProofPanel } from "@/components/ProofPanel";
 import { RankedBars } from "@/components/RankedBar";
 import { SectionTabs } from "@/components/SectionTabs";
 import { BurstTimeline } from "@/components/BurstTimeline";
+import { InsightPanel } from "@/components/InsightPanel";
 import BlueprintBackground from "@/components/BlueprintBackground";
 import { formatBytes, formatDuration, formatFrequency, downsamplePair } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -945,6 +946,9 @@ export default function AnalysisWorkspacePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* AI analyst brief (Gemma 4, optional feature) */}
+      <InsightPanel projectId={project.id} />
       </div>
     </div>
   );

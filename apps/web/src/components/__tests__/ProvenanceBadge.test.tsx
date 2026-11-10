@@ -13,11 +13,12 @@ const SOURCES: Source[] = [
   "measured",
   "estimated",
   "hypothesis",
+  "ai_hypothesis",
   "unknown",
 ];
 
 describe("SourceBadge distinct rendering per source", () => {
-  it("renders a distinct label for each of the 6 sources", () => {
+  it("renders a distinct label for each source", () => {
     render(
       <>
         {SOURCES.map((s) => (
@@ -26,18 +27,20 @@ describe("SourceBadge distinct rendering per source", () => {
       </>
     );
 
-    const metadata = screen.getByText(/metadata/).parentElement!;
-    const userSupplied = screen.getByText(/user supplied/).parentElement!;
-    const measured = screen.getByText(/measured/).parentElement!;
-    const estimated = screen.getByText(/estimated/).parentElement!;
-    const hypothesis = screen.getByText(/hypothesis/).parentElement!;
-    const unknown = screen.getByText(/unknown/).parentElement!;
+    const metadata = screen.getByText("metadata (exact)").parentElement!;
+    const userSupplied = screen.getByText("user supplied (exact)").parentElement!;
+    const measured = screen.getByText("measured (exact)").parentElement!;
+    const estimated = screen.getByText("estimated").parentElement!;
+    const hypothesis = screen.getByText("hypothesis").parentElement!;
+    const aiHypothesis = screen.getByText("ai hypothesis").parentElement!;
+    const unknown = screen.getByText("unknown").parentElement!;
 
     // distinct text labels
     expect(metadata.textContent).not.toBe(userSupplied.textContent);
     expect(metadata.textContent).not.toBe(measured.textContent);
     expect(estimated.textContent).not.toBe(hypothesis.textContent);
-    expect(hypothesis.textContent).not.toBe(unknown.textContent);
+    expect(hypothesis.textContent).not.toBe(aiHypothesis.textContent);
+    expect(aiHypothesis.textContent).not.toBe(unknown.textContent);
   });
 
   it("renders exact sources with an 'exact' label", () => {
