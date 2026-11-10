@@ -34,6 +34,10 @@ class RawIQFormat:
     signed_offset: bool = True  # for unsigned formats, whether to subtract the midpoint
     sample_rate_hz: Optional[float] = None
     center_frequency_hz: Optional[float] = None
+    # Simultaneous antenna channels in the interleaved stream (frame order:
+    # CH0 I, CH0 Q, CH1 I, CH1 Q, ...). Only used by the "interleaved" layout;
+    # separate_iq / real_only keep exactly one complex channel.
+    channels: int = 1
 
 
 def _read_typed(
