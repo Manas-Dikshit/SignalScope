@@ -2,6 +2,11 @@
 
 Optional local Gemma 4 service for the SignalScope analyst brief.
 
+The sidecar is **off by default**. With `AI_ENABLED=false` the deterministic
+DSP/API/UI stack runs exactly as before, and nothing in this directory is
+required. When enabled, the sidecar reads a structured evidence bundle over
+stored DSP estimates and returns a cited brief labelled `ai_hypothesis`.
+
 ## Run with the fake backend (no model download)
 
 ```bash
@@ -11,6 +16,10 @@ uvicorn app.main:app --reload --port 8100
 ```
 
 `GET /health` -> `{"status":"ok","backend":"fake",...}`
+
+The fake backend is deterministic, needs no weights, and produces the same
+validated response schema as the real model. It is the default for tests and
+offline demos.
 
 ## Run with a local Gemma 4 model
 
@@ -31,7 +40,19 @@ uvicorn app.main:app --host 0.0.0.0 --port 8100
 The Transformers path loads the model lazily, so API/worker processes and tests
 never import torch unless `AI_BACKEND=transformers` is selected.
 
-## Phase 3 multimodal evidence
+## Tests
+
+```bash
+cd services/ai
+python -m pytest tests/ -q          # 19 tests
+```
+
+The suite covers validation and numeric guards, cited brief generation,
+low-confidence tool follow-ups, max-step and timeout handling, and evidence
+image caps. Remove or exclude any local scratch tests before running the full
+suite.
+
+## Multimodal evidence
 
 The API worker renders four small PNGs from the bounded project window:
 PSD, waterfall, constellation, and M-th power spectrum. They are sent as
@@ -53,7 +74,7 @@ text, image, and audio; the 26B/31B variants are text+image only. See
 `docs/GEMMA4_IMPLEMENTATION_PLAN.md` for memory guidance. The deterministic
 `FakeBackend` is the default for tests and offline demos.
 
-## Phase 2 tool loop
+## Agent tool loop
 
 The analyst may call four allowlisted DSP tools:
 
