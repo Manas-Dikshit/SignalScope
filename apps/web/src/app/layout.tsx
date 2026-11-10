@@ -34,7 +34,22 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrains.variable}`}>
       <body className="min-h-screen antialiased font-sans">
-        <Providers>{children}</Providers>
+        <div className="app-background" aria-hidden="true">
+          <video
+            className="app-background-video"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+          >
+            <source src="/signalscope-background.mp4" type="video/mp4" />
+          </video>
+          <div className="app-background-overlay" />
+        </div>
+        <div className="relative z-10 min-h-screen">
+          <Providers>{children}</Providers>
+        </div>
       </body>
     </html>
   );

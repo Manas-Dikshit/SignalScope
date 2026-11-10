@@ -83,7 +83,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-transparent text-foreground font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
@@ -111,6 +111,37 @@
 /* ── Component layers ──────────────────────────────────────────────── */
 
 @layer components {
+  /* Shared ambient video background for every application route. */
+  .app-background {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background: hsl(var(--background));
+    pointer-events: none;
+  }
+
+  .app-background-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.3;
+  }
+
+  .app-background-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.76), hsl(var(--background) / 0.92)),
+      radial-gradient(circle at 50% 0%, hsl(var(--primary) / 0.08), transparent 55%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-background-video {
+      display: none;
+    }
+  }
+
   /* Animated background blobs (login / hero) */
   .aurora-bg {
     position: fixed;

@@ -9,7 +9,7 @@ import SignalBackdrop from "@/components/SignalBackdrop";
 import { DemoSamplesSection } from "@/components/DemoSamplesSection";
 import { formatBytes, formatDuration } from "@/lib/utils";
 import Link from "next/link";
-import { ArrowRight, FolderOpen, Radio } from "lucide-react";
+import { ArrowRight, FolderOpen, Radio, Upload } from "lucide-react";
 
 export default function DashboardPage() {
   const { data: stats, isLoading, error } = useQuery({
@@ -19,22 +19,45 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero — waveform backdrop + glass panel. Parallax on scroll. */}
+      {/* Primary action and workspace summary */}
       <section className="relative overflow-hidden rounded-2xl glass-panel shadow-elevation-2 reveal">
         <SignalBackdrop variant="hero" />
-        <div className="relative z-10 space-y-6 p-6 sm:p-8">
-          <div className="space-y-1">
+        <div className="relative z-10 space-y-8 p-6 sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div className="space-y-2">
             <p className="text-sm uppercase tracking-[0.25em] text-primary/90 font-medium">
               RF Intelligence Workbench
             </p>
             <h1 className="font-display text-2xl font-semibold tracking-tight">
-              Dashboard
+              Your analysis workspace
             </h1>
-            <p className="text-sm text-muted-foreground">
-              Overview of your RF analysis workspace.
+            <p className="max-w-xl text-sm leading-6 text-muted-foreground">
+              Upload an observation, review its signal evidence, and continue
+              where you left off.
             </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/recordings"
+                className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-md bg-primary px-8 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Upload observation
+              </Link>
+              <Link
+                href="/recordings"
+                className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-md border border-input bg-background px-8 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                Open library
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </div>
           </div>
 
+          <div className="space-y-3">
+            <div className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+              Workspace snapshot
+            </div>
           {isLoading ? (
             <div className="grid gap-4 md:grid-cols-3">
               {[1, 2, 3].map((i) => (
@@ -67,16 +90,20 @@ export default function DashboardPage() {
               />
             </div>
           )}
+          </div>
         </div>
       </section>
 
-      {/* Running jobs */}
+      {/* Active work takes priority over history. */}
       {stats?.running_jobs && stats.running_jobs.length > 0 && (
-        <Card className="reveal reveal-delay-2">
-          <CardHeader>
+        <Card className="reveal reveal-delay-1 border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base font-display font-semibold">
-              Running Jobs
+              Active analysis
             </CardTitle>
+            <span className="text-xs text-primary">
+              {stats.running_jobs.length} in progress
+            </span>
           </CardHeader>
           <CardContent className="space-y-2">
             {stats.running_jobs.map((job) => (
@@ -109,17 +136,18 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      {/* Recent projects */}
+      {/* Recent work */}
+      <div className="grid gap-6 xl:grid-cols-2">
       <Card className="reveal reveal-delay-2">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-display font-semibold">
-            Recent Projects
+            Continue analysis
           </CardTitle>
           <Link
             href="/recordings"
             className="text-xs text-primary hover:underline inline-flex items-center gap-1"
           >
-            New analysis <ArrowRight className="h-3 w-3" />
+            View all <ArrowRight className="h-3 w-3" />
           </Link>
         </CardHeader>
         <CardContent>
@@ -170,11 +198,10 @@ export default function DashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Recent recordings */}
       <Card className="reveal reveal-delay-3">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base font-display font-semibold">
-            Recent Recordings
+            Latest observations
           </CardTitle>
           <Link href="/recordings" className="text-xs text-primary hover:underline">
             View library
@@ -217,6 +244,7 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+      </div>
 
       {/* Demo Signals Quick Start */}
       <div className="reveal reveal-delay-3">
