@@ -1,0 +1,23 @@
+sequenceDiagram
+    autonumber
+    participant B as Browser
+    participant A as FastAPI
+    participant R as Redis
+    participant W as Celery worker
+    participant P as PostgreSQL
+    participant V as Uploads volume
+
+    B->>A: POST /api/projects/{id}/estimate-parameters
+    A->>R: enqueue estimate_parameters
+    A-->>B: 202 { job_id, status: "queued" }
+    R->>W: deliver task
+    W->>V: read recording
+    W->>W: run signalscope_dsp pipeline
+    W->>P: upsert parameter_estimates (+ evidence)
+    W->>R: mark SUCCESS
+    loop every 2 s
+        B->>A: GET /api/jobs/{id}
+        A-->>B: running / completed
+    end
+    B->>A: GET /api/projects/{id}/parameters
+    A-->>B: estimates with source, confidence, evidence, alternatives
