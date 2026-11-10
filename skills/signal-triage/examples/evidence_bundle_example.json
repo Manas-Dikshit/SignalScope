@@ -1,0 +1,93 @@
+{
+  "project_id": "01a1c458-77e8-a884-ea50-ad72a4257d9f",
+  "recording": {
+    "filename": "demo_qpsk_carrier.wav",
+    "format": "wav",
+    "sample_rate_hz": 48000.0,
+    "center_frequency_hz": null,
+    "duration_seconds": 2.0,
+    "total_samples": 96000
+  },
+  "estimates": [
+    {
+      "name": "occupied_bandwidth",
+      "value": 3120.0,
+      "unit": "Hz",
+      "source": "estimated",
+      "confidence": 0.94,
+      "evidence": ["99% spectral power containment within [10440.0, 13560.0] Hz"],
+      "alternatives": [],
+      "warnings": []
+    },
+    {
+      "name": "snr_db",
+      "value": 18.5,
+      "unit": "dB",
+      "source": "estimated",
+      "confidence": 0.91,
+      "evidence": ["In-band vs out-of-band power ratio estimate"],
+      "alternatives": [],
+      "warnings": []
+    },
+    {
+      "name": "modulation",
+      "value": "QPSK",
+      "unit": null,
+      "source": "hypothesis",
+      "confidence": 0.88,
+      "evidence": ["4th-power cyclostationary spectral peakiness = 0.92"],
+      "alternatives": [
+        { "value": "16-QAM", "confidence": 0.28, "evidence": ["low amplitude-ring variance"] }
+      ],
+      "warnings": ["Modulation classification is a hypothesis backed by cyclostationary evidence."]
+    },
+    {
+      "name": "symbol_rate",
+      "value": 2400.0,
+      "unit": "baud",
+      "source": "estimated",
+      "confidence": 0.93,
+      "evidence": ["Dominant symbol-clock line peak at 2400.0 Hz in envelope spectrum"],
+      "alternatives": [],
+      "warnings": []
+    }
+  ],
+  "deep_analysis": {
+    "symbol_rate_hz": 2400.0,
+    "demodulation": {
+      "modulation": "QPSK",
+      "samples_per_symbol": 20,
+      "n_symbols": 4800,
+      "n_bits": 9600,
+      "first_bytes_hex": "48656c6c6f20576f726c64"
+    },
+    "fec": {
+      "fec_type": "convolutional",
+      "crc_valid": true,
+      "stage_failed": null,
+      "corrected_symbols": 0,
+      "warnings": []
+    }
+  },
+  "fingerprint": {
+    "version": "1",
+    "dimensions": 22,
+    "features": {
+      "occupied_bandwidth_ratio": 0.065,
+      "spectral_flatness": 0.12,
+      "crest_factor_norm": 0.32,
+      "zero_crossing_rate": 0.08,
+      "snr_norm": 0.62,
+      "drift_ratio": 0.01
+    },
+    "created_at": "2026-11-10T08:00:00Z"
+  },
+  "available_tools": [
+    "get_project_evidence",
+    "run_deep_analysis",
+    "try_demodulation",
+    "try_fec",
+    "search_similar_recordings"
+  ],
+  "prompt_version": "2026-11-01"
+}

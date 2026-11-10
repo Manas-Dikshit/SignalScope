@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "InsightResponse",
+  "description": "Structured AI analyst response with anti-hallucination citation guard",
+  "type": "object",
+  "required": [
+    "summary_template",
+    "hypothesis",
+    "conflicts",
+    "anomalies",
+    "recommended_actions",
+    "unknowns",
+    "limitations",
+    "citations",
+    "tool_trace"
+  ],
+  "properties": {
+    "summary_template": {
+      "type": "string",
+      "description": "Natural language summary containing {{estimate:name}} or {{evidence:name}} placeholders"
+    },
+    "hypothesis": {
+      "type": "object",
+      "required": ["label", "agreement_with_dsp", "confidence_note", "evidence_refs"],
+      "properties": {
+        "label": { "type": "string" },
+        "agreement_with_dsp": { "type": "boolean" },
+        "confidence_note": { "type": "string" },
+        "evidence_refs": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "conflicts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["between", "explanation", "evidence_refs"],
+        "properties": {
+          "between": { "type": "array", "items": { "type": "string" } },
+          "explanation": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "anomalies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["description", "severity", "evidence_refs"],
+        "properties": {
+          "description": { "type": "string" },
+          "severity": { "type": "string", "enum": ["low", "medium", "high"] },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "recommended_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action", "args", "why", "evidence_refs"],
+        "properties": {
+          "action": { "type": "string" },
+          "args": { "type": "object" },
+          "why": { "type": "string" },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "unknowns": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "citations": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "tool_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["call", "result"],
+        "properties": {
+          "call": { "type": "object" },
+          "result": { "type": "object" }
+        }
+      }
+    }
+  }
+}

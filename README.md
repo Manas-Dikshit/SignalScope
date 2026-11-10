@@ -376,6 +376,8 @@ SignalScope/
 | [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) | Local Docker/native setup and configuration reference |
 | [`docs/REQUIREMENTS_TRACEABILITY.md`](./docs/REQUIREMENTS_TRACEABILITY.md) | Requirement → implementation → test mapping |
 | [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](./docs/GEMMA4_IMPLEMENTATION_PLAN.md) | Gemma 4 phases, contracts, guardrails, demo script |
+| [`MODEL_CARD.md`](./MODEL_CARD.md) | Gemma 4 E4B model card, anti-hallucination architecture, and safety guardrails |
+| [`skills/signal-triage/SKILL.md`](./skills/signal-triage/SKILL.md) | Agent Skill specification for autonomous RF signal triage |
 | [`docs/DESIGN_NOTES.md`](./docs/DESIGN_NOTES.md) | UI visual-depth rationale and deferred ML note |
 | [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Layout, conventions, test expectations, PR checklist |
 | [`REFERENCES.md`](./REFERENCES.md) | Formats, DSP, FEC, and AI references |

@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvidenceBundle",
+  "description": "Structured DSP evidence bundle passed to the SignalScope AI analyst",
+  "type": "object",
+  "required": ["project_id", "recording", "estimates"],
+  "properties": {
+    "project_id": { "type": "string", "format": "uuid" },
+    "recording": {
+      "type": "object",
+      "required": ["filename", "format", "sample_rate_hz", "duration_seconds", "total_samples"],
+      "properties": {
+        "filename": { "type": "string" },
+        "format": { "type": "string", "enum": ["wav", "raw_iq", "sigmf", "synthetic"] },
+        "sample_rate_hz": { "type": "number", "minimum": 0 },
+        "center_frequency_hz": { "type": ["number", "null"] },
+        "duration_seconds": { "type": "number", "minimum": 0 },
+        "total_samples": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "estimates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "value", "source", "confidence", "evidence"],
+        "properties": {
+          "name": { "type": "string" },
+          "value": {},
+          "unit": { "type": ["string", "null"] },
+          "source": { "type": "string", "enum": ["metadata", "user_supplied", "measured", "estimated", "hypothesis", "ai_hypothesis", "unknown"] },
+          "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "evidence": { "type": "array", "items": { "type": "string" } },
+          "alternatives": { "type": "array" },
+          "warnings": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "deep_analysis": { "type": ["object", "null"] },
+    "images": {
+      "type": "object",
+      "properties": {
+        "psd": { "type": "string" },
+        "waterfall": { "type": "string" },
+        "constellation": { "type": "string" },
+        "mth_power": { "type": "string" }
+      }
+    },
+    "fingerprint": {
+      "type": ["object", "null"],
+      "properties": {
+        "version": { "type": "string" },
+        "dimensions": { "type": "integer" },
+        "features": { "type": "object" },
+        "created_at": { "type": "string" }
+      }
+    },
+    "available_tools": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "prompt_version": { "type": "string" }
+  }
+}
