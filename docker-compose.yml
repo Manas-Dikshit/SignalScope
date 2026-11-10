@@ -113,6 +113,8 @@ services:
       AI_BACKEND: ${AI_BACKEND:-fake}
       AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
       AI_DEVICE: ${AI_DEVICE:-auto}
+      AI_QUANTIZATION: ${AI_QUANTIZATION:-none}
+      AI_MAX_GPU_MEMORY: ${AI_MAX_GPU_MEMORY:-}
       AI_ENABLE_THINKING: ${AI_ENABLE_THINKING:-false}
       AI_MAX_NEW_TOKENS: ${AI_MAX_NEW_TOKENS:-1024}
       AI_MAX_TOOL_STEPS: ${AI_MAX_TOOL_STEPS:-6}
@@ -123,6 +125,9 @@ services:
       AI_MAX_IMAGE_BYTES: ${AI_MAX_IMAGE_BYTES:-300000}
       AI_MAX_TOTAL_IMAGE_BYTES: ${AI_MAX_TOTAL_IMAGE_BYTES:-1000000}
       HF_HOME: /models
+    # Requires the NVIDIA container runtime (Docker Desktop: WSL2 + NVIDIA driver).
+    # Harmless on CPU-only hosts as long as the GPU reservation is removed.
+    gpus: all
     ports:
       - "8100:8100"
     volumes:
