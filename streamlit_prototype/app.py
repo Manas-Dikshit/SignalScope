@@ -288,6 +288,8 @@ elif source_choice == "Upload raw IQ":
     dtype = st.sidebar.selectbox("Sample dtype", ["int8", "uint8", "int16", "uint16", "int32", "float32", "float64"])
     layout = st.sidebar.selectbox("Layout", ["interleaved", "separate_iq", "real_only"])
     endian = st.sidebar.selectbox("Endianness", ["little", "big"])
+    n_channels = st.sidebar.number_input("Antenna channels (1 = single, 2 = dual-antenna dump)", value=1,
+                                         min_value=1, max_value=4, key="iq_channels")
     has_sr = st.sidebar.checkbox("I know the sample rate", value=True)
     sample_rate_hz = st.sidebar.number_input("Sample rate (Hz)", value=1_000_000, step=10_000) if has_sr else None
     has_cf = st.sidebar.checkbox("I know the center frequency", value=False)
@@ -298,7 +300,8 @@ elif source_choice == "Upload raw IQ":
             tmp_path = tmp.name
         fmt = RawIQFormat(dtype=dtype, layout=layout, endian=endian,
                            sample_rate_hz=float(sample_rate_hz) if sample_rate_hz else None,
-                           center_frequency_hz=float(center_freq_hz) if center_freq_hz else None)
+                           center_frequency_hz=float(center_freq_hz) if center_freq_hz else None,
+                           channels=int(n_channels))
         rec = load_raw_iq(tmp_path, fmt)
         st.session_state.recording = rec
         st.session_state.ground_truth = None
