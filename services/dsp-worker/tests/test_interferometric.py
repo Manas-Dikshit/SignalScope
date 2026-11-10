@@ -108,7 +108,7 @@ def test_dual_antenna_raw_iq_frames(tmp_path):
         assert recorder.metadata.channel_count == 2
         assert recorder.metadata.total_samples == n
         assert np.allclose(recorder.samples.real, ch0[:, 0] / 32768, atol=1e-3)
-        assert recorder.other_channels[0].imag[:5] != 0
+        assert recorder.other_channels[0].imag[:5].any()
         assert np.allclose(recorder.other_channels[0].real, 0, atol=1e-6)
 
     single = load_raw_iq(tmp_path / "dual.iq",
