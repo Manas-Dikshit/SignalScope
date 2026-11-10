@@ -3,4 +3,5 @@
 torch>=2.6
 transformers>=5.10.1
 accelerate>=1.0
+bitsandbytes>=0.45
 pillow>=10.0

@@ -1,0 +1,5 @@
+flowchart LR
+    A["1 · Load and condition<br/><span style='font-size:13px'>WAV · raw I/Q · SigMF<br/>shift · filter · ROI crop</span>"] --> B["2 · Characterise<br/><span style='font-size:13px'>PSD · waterfall · occupied BW<br/>bursts · duty cycle</span>"]
+    B --> C["3 · Hypothesise<br/><span style='font-size:13px'>modulation: BPSK · QPSK · 8-PSK · 16-QAM · 2-FSK<br/>symbol rate · antenna origin</span>"]
+    C --> D["4 · Recover<br/><span style='font-size:13px'>demodulate · de-interleave<br/>FEC · bit correlation</span>"]
+    D --> E["5 · Assemble provenance<br/><span style='font-size:13px'>source · confidence<br/>evidence · alternatives · warnings</span>"]

@@ -1,0 +1,10 @@
+flowchart TB
+    S["Stored DSP evidence"] --> EB["EvidenceBundle"]
+    EB --> IMG["Rendered PNGs<br/><span style='font-size:12px'>PSD · waterfall · constellation · M-th power</span>"]
+    EB --> G["Gemma 4 sidecar<br/><span style='font-size:12px'>fake or transformers backend</span>"]
+    IMG --> G
+    G --> T["Allowlisted DSP tools<br/><span style='font-size:12px'>get_project_evidence · run_deep_analysis<br/>try_demodulation · try_fec · search_similar_recordings</span>"]
+    T --> API["Private API route<br/><span style='font-size:12px'>X-Internal-Token</span>"]
+    API --> G
+    G --> V["Schema + citation + numeric validation"]
+    V --> OUT["Cited brief<br/><span style='font-size:12px'>source = ai_hypothesis</span>"]

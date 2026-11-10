@@ -1,0 +1,10 @@
+# Optional QLoRA training dependencies for services/ai/training.
+# Install on a GPU host only. The dataset generator, evaluator, and all tests
+# run without these packages.
+torch>=2.6
+transformers>=5.10.1
+accelerate>=1.0
+peft>=0.13
+bitsandbytes>=0.44
+datasets>=3.0
+pillow>=10.0

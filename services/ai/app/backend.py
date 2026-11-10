@@ -319,17 +319,44 @@ class TransformersBackend:
         if self._model is not None:
             return
         try:
+            import torch
             from transformers import AutoModelForMultimodalLM, AutoProcessor
         except ImportError as exc:  # pragma: no cover - depends on optional deps
             raise RuntimeError(
                 "transformers backend selected but optional AI dependencies are not installed"
             ) from exc
 
+        load_kwargs: dict[str, Any] = {"device_map": settings.AI_DEVICE}
+        quantization = settings.AI_QUANTIZATION.strip().lower()
+        if quantization in {"4bit", "8bit"}:
+            from transformers import BitsAndBytesConfig
+
+            load_kwargs["dtype"] = torch.bfloat16
+            if quantization == "4bit":
+                load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_quant_type="nf4",
+                    bnb_4bit_use_double_quant=True,
+                    bnb_4bit_compute_dtype=torch.bfloat16,
+                )
+            else:
+                load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_8bit=True
+                )
+        else:
+            load_kwargs["dtype"] = "auto"
+
+        if settings.AI_MAX_GPU_MEMORY:
+            # Cap the accelerator and let accelerate spill the rest to CPU
+            # instead of failing with an out-of-memory error.
+            load_kwargs["max_memory"] = {
+                0: settings.AI_MAX_GPU_MEMORY,
+                "cpu": "24GiB",
+            }
+
         self._processor = AutoProcessor.from_pretrained(settings.AI_MODEL)
         self._model = AutoModelForMultimodalLM.from_pretrained(
-            settings.AI_MODEL,
-            dtype="auto",
-            device_map=settings.AI_DEVICE,
+            settings.AI_MODEL, **load_kwargs
         )
 
     def _initial_messages(self, request: InsightRequest) -> list[dict[str, Any]]:

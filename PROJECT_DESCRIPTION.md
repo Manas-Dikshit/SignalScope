@@ -67,11 +67,13 @@ dangerous: it is easy to over-trust a result that was never verified.
 SignalScope is a single workbench that runs the whole chain and keeps the
 reasoning attached to every result:
 
-```text
-load → condition → spectrum → bursts → modulation → symbol rate
-     → interferometric origin → demodulation → de-interleave → FEC
-     → bit correlation → provenance assembly
-```
+![SignalScope pipeline: load and condition, characterise, hypothesise, recover, assemble provenance](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/diagrams/pipeline.png)
+
+[Open pipeline diagram](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/diagrams/pipeline.png)
+
+In words: **load and condition → characterise (spectrum, bursts) →
+hypothesise (modulation, symbol rate, antenna origin) → recover
+(demodulation, de-interleaving, FEC, correlation) → assemble provenance.**
 
 Every stage produces structured evidence. The API persists it. The UI exposes
 it. A user can open **View proof** and inspect the actual spectrum peak,
@@ -180,26 +182,14 @@ This makes the entire pipeline demonstrable with no external dataset.
 
 ### 7.1 Asynchronous full analysis
 
-```text
- 1. Browser  -> FastAPI : POST /api/projects/{id}/estimate-parameters
- 2. FastAPI  -> Redis   : enqueue estimate_parameters
- 3. FastAPI  -> Browser : 202 { job_id, status: "queued" }
- 4. Redis    -> Worker  : deliver task
- 5. Worker   -> Volume  : read recording
- 6. Worker   -> Worker  : run signalscope_dsp pipeline
- 7. Worker   -> Postgres: upsert parameter_estimates (+ evidence)
- 8. Worker   -> Redis   : mark SUCCESS
- 9. Browser  -> FastAPI : GET /api/jobs/{id}  (poll every 2 s)
-10. FastAPI  -> Browser : running / completed
-11. Browser  -> FastAPI : GET /api/projects/{id}/parameters
-12. FastAPI  -> Browser : estimates with source, confidence, evidence,
-                          alternatives
-```
+![Sequence diagram of the asynchronous full analysis job](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/diagrams/async-analysis.png)
 
-**Read as:** the browser asks FastAPI for an estimate, FastAPI enqueues a Celery
-tasks through Redis and returns `202` with a job id. The worker reads the
+[Open sequence diagram](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/diagrams/async-analysis.png)
+
+In words: the browser asks FastAPI for an estimate; FastAPI enqueues a Celery
+task through Redis and returns `202` with a job id; the worker reads the
 recording, runs the DSP pipeline, persists estimates and evidence in
-PostgreSQL, then marks the job successful. The browser polls the job, refetches
+PostgreSQL, then marks the job successful; the browser polls the job, refetches
 when it completes, and renders the persisted estimates. No analysis result is
 held only in memory.
 
@@ -286,29 +276,15 @@ classification with evidence — not a direction-finding product.
 The AI layer is **off by default** (`AI_ENABLED=false`). The deterministic
 product is complete without it.
 
-```text
-Stored DSP evidence
-        |
-        v
-  EvidenceBundle
-    |       |
-    |       +--> Rendered PNGs (PSD, waterfall, constellation, M-th power)
-    |                     |
-    v                     v
-Gemma 4 sidecar <---------+
-    |
-    +--> Allowlisted DSP tools
-    |         |
-    |         v
-    |    Private API route (X-Internal-Token)
-    |         |
-    |         +--> back to the sidecar
-    |
-    +--> Schema + citation + numeric validation
-                |
-                v
-      Cited brief, source = ai_hypothesis
-```
+![Gemma 4 analyst flow: stored evidence to cited brief](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/diagrams/ai-analyst.png)
+
+[Open AI analyst diagram](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/diagrams/ai-analyst.png)
+
+In words: stored DSP evidence is packaged into an `EvidenceBundle`; rendered
+PNGs and the bundle go to the Gemma 4 sidecar; the sidecar calls only
+allowlisted DSP tools through FastAPI's token-gated private route; schema,
+citation, and numeric validation run before a cited brief is stored with
+`source = ai_hypothesis`.
 
 ### 10.1 What it does
 
@@ -350,42 +326,17 @@ Other local runtimes can be added behind the same `InsightBackend` protocol.
 
 ## 11. System architecture
 
-```text
-Client
-  Browser: Next.js 14 App Router UI
-    Dashboard - Recording library - Analysis workspace
-    TanStack Query: job polling + cache
-        |
-        | REST (JWT)
-        v
-FastAPI
-  REST API: auth - uploads - recordings - projects - jobs
-  Private DSP tools route (X-Internal-Token)
-  Evidence image renderer
-        |
-        +--> Redis 7: Celery broker + result backend
-        |         |
-        |         v
-        |    Celery worker
-        |      estimate_parameters_task
-        |      generate_insight_task
-        |      signalscope_dsp: loaders - DSP stages - FEC - provenance
-        |         |
-        |         +--> uploads volume: WAV / raw I/Q / SigMF recordings
-        |
-        +--> PostgreSQL 16: projects - recordings - jobs - estimates -
-        |      evidence - insights
-        |
-        +--> Optional Gemma 4 sidecar
-               fake or transformers backend
-               agent loop + validation
-```
+![System architecture: browser, Next.js UI, FastAPI, Redis, Celery worker, PostgreSQL, uploads volume, optional Gemma 4 sidecar](https://raw.githubusercontent.com/Manas-Dikshit/SignalScope/main/docs/diagrams/architecture.png)
 
-The browser talks only to FastAPI. FastAPI hands long-running work to Celery
-through Redis, and the worker is the only process that reads recordings from the
-uploads volume and runs the DSP pipeline. PostgreSQL is the single source of
-truth for results. The Gemma 4 sidecar is optional and reached only through
-FastAPI's token-gated private route.
+[Open architecture diagram](https://github.com/Manas-Dikshit/SignalScope/blob/main/docs/diagrams/architecture.png)
+
+In words: a browser runs the Next.js 14 App Router UI (dashboard, recording
+library, analysis workspace) and polls jobs with TanStack Query. It talks only
+to FastAPI over REST with a JWT cookie. FastAPI hands long-running work to
+Celery through Redis, and the worker is the only process that reads recordings
+from the uploads volume and runs `signalscope_dsp`. PostgreSQL is the single
+source of truth for results. The Gemma 4 sidecar is optional and reached only
+through FastAPI's token-gated private route.
 
 ### 11.1 Components
 
