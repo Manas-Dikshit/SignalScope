@@ -138,6 +138,7 @@ def estimate_parameters_task(self, project_id_str: str):
             features.crest_factor,
             features.zero_crossing_rate,
             features.snr_db,
+            features.frequency_drift_rate,
             mod_est,
             *sym_rates,
         ]

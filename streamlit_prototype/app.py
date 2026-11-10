@@ -463,6 +463,8 @@ with tabs[4]:
         with c3:
             render_estimate("Crest factor", feats.crest_factor)
             render_estimate("Spectral flatness", feats.spectral_flatness)
+        with c1:
+            render_estimate("Frequency drift rate", feats.frequency_drift_rate, " Hz/s")
         _graph_expander(plot_feature_profile(feats))
 
 with tabs[5]:
