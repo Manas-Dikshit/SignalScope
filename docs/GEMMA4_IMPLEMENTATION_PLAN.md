@@ -3,8 +3,21 @@
 **Project:** SignalScope AI — Explainable RF Signal-Analysis Workbench  
 **Target problem statement:** Open Innovation Track 1 — **Best Use of Gemma 4**  
 **Secondary target:** Open Innovation Track 2 — **Best Open-Source AI Project**  
-**Status:** Implementation proposal  
+**Status:** In Progress — Phase 0 & Phase 1 Complete (One-shot Cited Brief Operational)  
 **Date:** November 2026
+
+---
+
+### Implementation Progress Summary (Updated November 2026)
+
+| Phase | Milestone | Status | Key Deliverables |
+| :--- | :--- | :--- | :--- |
+| **Phase 0** | Setup & Guardrails | **100% Complete** | `services/ai` skeleton, `FakeBackend`, `TransformersBackend`, Docker Compose `ai` profile, Alembic `003_analysis_insights.py`, `ai_hypothesis` source enum |
+| **Phase 1** | One-Shot Cited Brief | **100% Complete** | `EvidenceBundle` extraction in `tasks.py`, `generate_insight_task`, `POST /api/projects/{id}/insights`, `render_template` numeric substitution, `InsightPanel.tsx` in UI |
+| **Phase 2** | Agent Tool Loop | *Next Up* | Allowlisted DSP tools (`try_demodulation`, `try_fec`, `run_deep_analysis`), multi-step agent loop, tool execution trace |
+| **Phase 3** | Multimodal Evidence | *Planned* | Rendered PSD, spectrogram, constellation image inputs to Gemma 4 |
+| **Phase 4** | Rare-Signal Gallery | *Optional* | Spectral fingerprint nearest-neighbor search |
+| **Phase 5** | QLoRA Fine-Tuning | *Optional* | Domain fine-tuning on RF evidence pairs |
 
 ---
 
@@ -687,39 +700,39 @@ Document the exact model file and license in the README.
 
 ## 15. Implementation phases
 
-### Phase 0 — Setup and guardrails (2–3 hours)
+### Phase 0 — Setup and guardrails (2–3 hours) — [COMPLETE]
 
 Tasks:
 
-- [ ] Create `services/ai` skeleton with `/health`.
-- [ ] Add `AI_ENABLED`, `AI_SERVICE_URL`, `AI_MODEL`, `AI_BACKEND` to config.
-- [ ] Add optional `ai` Compose profile.
-- [ ] Add `ai_hypothesis` source to DSP + frontend types.
-- [ ] Add `analysis_insights` model + Alembic migration.
-- [ ] Add a fake AI backend for tests.
+- [x] Create `services/ai` skeleton with `/health`. (Delivered: `services/ai/app/main.py`)
+- [x] Add `AI_ENABLED`, `AI_SERVICE_URL`, `AI_MODEL`, `AI_BACKEND` to config. (Delivered: `services/api/app/config.py`, `services/ai/app/config.py`)
+- [x] Add optional `ai` Compose profile. (Delivered: `docker-compose.yml`, `services/ai/Dockerfile`)
+- [x] Add `ai_hypothesis` source to DSP + frontend types. (Delivered: `signalscope_dsp.common.Source.AI_HYPOTHESIS`, `types.ts`)
+- [x] Add `analysis_insights` model + Alembic migration. (Delivered: `models.py`, `alembic/versions/003_analysis_insights.py`)
+- [x] Add a fake AI backend for tests. (Delivered: `services/ai/app/backend.py` `FakeBackend`)
 
 Acceptance:
 
-- Existing API, DSP, and frontend tests pass with `AI_ENABLED=false`.
-- `docker compose --profile ai up` starts the AI service and `/health` reports the model name.
+- Existing API, DSP, and frontend tests pass with `AI_ENABLED=false`. (Verified)
+- `docker compose --profile ai up` starts the AI service and `/health` reports the model name. (Verified)
 
-### Phase 1 — One-shot cited brief (4–5 hours)
+### Phase 1 — One-shot cited brief (4–5 hours) — [COMPLETE]
 
 Tasks:
 
-- [ ] Build `EvidenceBundle` from existing DB rows.
-- [ ] Add prompt + strict JSON schema.
-- [ ] Add `POST /api/projects/{id}/insights`.
-- [ ] Add Celery `generate_insight_task`.
-- [ ] Add validation + numeric substitution.
-- [ ] Add `InsightPanel` with citations.
+- [x] Build `EvidenceBundle` from existing DB rows. (Delivered: `tasks.py` in `generate_insight_task`)
+- [x] Add prompt + strict JSON schema. (Delivered: `schemas.py`, `backend.py`)
+- [x] Add `POST /api/projects/{id}/insights`. (Delivered: `services/api/app/routers/insights.py`)
+- [x] Add Celery `generate_insight_task`. (Delivered: `tasks.py`)
+- [x] Add validation + numeric substitution. (Delivered: `services/ai/app/validation.py` `render_template` & `validate_insight`)
+- [x] Add `InsightPanel` with citations. (Delivered: `apps/web/src/components/InsightPanel.tsx` mounted in `projects/[id]/page.tsx`)
 
 Acceptance:
 
-- A completed DSP project produces a cited brief.
-- Every numeric value in the brief matches a DB estimate.
-- Invalid model output falls back safely.
-- UI clearly marks the brief as AI-generated.
+- A completed DSP project produces a cited brief. (Verified)
+- Every numeric value in the brief matches a DB estimate. (Verified: strict placeholder substitution)
+- Invalid model output falls back safely. (Verified: fallback on parse/validation error)
+- UI clearly marks the brief as AI-generated. (Verified: `ai_hypothesis` provenance badge)
 
 ### Phase 2 — Agent tools (5–6 hours)
 
