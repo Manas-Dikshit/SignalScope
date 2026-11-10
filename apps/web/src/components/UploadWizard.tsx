@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { PlotlyChart } from "@/components/PlotlyChart";
+import { DemoSamplesSection } from "@/components/DemoSamplesSection";
 import { downsamplePair, downsample, inferFormatFromFilename, type FileFormat } from "@/lib/utils";
 import { Upload, FileAudio, Check, X, ArrowLeft } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
@@ -242,6 +243,22 @@ export function UploadWizard({ onComplete }: { onComplete?: () => void }) {
                 multiple
                 accept=".wav,.iq,.bin,.dat,.raw,.sigmf-meta,.sigmf-data,.json"
                 onChange={handleFileSelect}
+              />
+            </div>
+
+            <div className="pt-1">
+              <DemoSamplesSection
+                variant="compact"
+                onSampleLoaded={async (rec) => {
+                  setCreatedRecording(rec);
+                  try {
+                    const preview = await recordingsApi.preview(rec.id);
+                    setPreviewData(preview);
+                  } catch {
+                    // Preview not critical
+                  }
+                  setStep("preview");
+                }}
               />
             </div>
 

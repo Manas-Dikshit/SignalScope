@@ -21,6 +21,7 @@ import {
 
 export default function RecordingsPage() {
   const [showUpload, setShowUpload] = React.useState(false);
+  const [showDemos, setShowDemos] = React.useState(false);
   const queryClient = useQueryClient();
   const { addToast } = useToast();
 
@@ -97,11 +98,27 @@ export default function RecordingsPage() {
             WAV, raw I/Q, and SigMF recordings for analysis.
           </p>
         </div>
-        <Button onClick={() => setShowUpload(true)} className="shrink-0 w-full sm:w-auto">
-          <Upload className="mr-2 h-4 w-4" />
-          Upload
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant={showDemos ? "secondary" : "outline"}
+            onClick={() => setShowDemos((v) => !v)}
+            className="w-full sm:w-auto"
+          >
+            <Sparkles className="mr-2 h-4 w-4 text-primary" />
+            {showDemos ? "Hide Demos" : "Demo Signals"}
+          </Button>
+          <Button onClick={() => setShowUpload(true)} className="shrink-0 w-full sm:w-auto">
+            <Upload className="mr-2 h-4 w-4" />
+            Upload
+          </Button>
+        </div>
       </div>
+
+      {showDemos && (
+        <div className="reveal">
+          <DemoSamplesSection />
+        </div>
+      )}
 
       {isLoading ? (
         <div className="space-y-3">
@@ -110,21 +127,29 @@ export default function RecordingsPage() {
           ))}
         </div>
       ) : !recordings || recordings.length === 0 ? (
-        <Card className="reveal reveal-delay-1">
-          <CardContent className="flex flex-col items-center justify-center py-14">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/10">
-              <FileAudio className="h-7 w-7 text-secondary" />
+        <div className="space-y-6">
+          <Card className="reveal reveal-delay-1">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary/10">
+                <FileAudio className="h-7 w-7 text-secondary" />
+              </div>
+              <p className="text-lg font-display font-semibold">No recordings yet</p>
+              <p className="mt-1 mb-5 text-sm text-muted-foreground text-center max-w-md">
+                Upload your own WAV, Raw IQ, or SigMF files, or load a demo RF signal below to try the platform instantly.
+              </p>
+              <Button onClick={() => setShowUpload(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload a recording
+              </Button>
+            </CardContent>
+          </Card>
+
+          {!showDemos && (
+            <div className="reveal reveal-delay-2">
+              <DemoSamplesSection />
             </div>
-            <p className="text-lg font-display font-semibold">No recordings</p>
-            <p className="mt-1 mb-5 text-sm text-muted-foreground">
-              Upload a WAV, Raw IQ, or SigMF recording to get started.
-            </p>
-            <Button onClick={() => setShowUpload(true)}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload your first recording
-            </Button>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       ) : (
         <div className="space-y-3">
           {recordings.map((rec) => {
