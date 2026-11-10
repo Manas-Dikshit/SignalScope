@@ -319,6 +319,7 @@ Gemma 4 sidecar <---------+
   - `run_deep_analysis`
   - `try_demodulation`
   - `try_fec`
+  - `search_similar_recordings`
 - Reports conflicts, anomalies, unknowns, limitations, and recommended next
   actions.
 - Produces a brief whose numeric values are substituted by the backend from
@@ -587,7 +588,7 @@ documented in `CONTRIBUTING.md`.
 - [x] Interferometric origin discrimination from dual-antenna IQ
 - [x] Demo signal library and app-shell UI
 - [x] Gemma 4 cited brief, agent tool loop, multimodal evidence images
-- [ ] Rare-signal gallery / fingerprint similarity search
+- [x] Rare-signal gallery / fingerprint similarity search
 - [ ] QLoRA fine-tuning on synthetic RF evidence pairs
 - [ ] Closed-loop carrier and timing recovery (Costas / PLL / Gardner)
 - [ ] Neural-network modulation classifier

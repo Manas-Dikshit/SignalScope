@@ -263,7 +263,7 @@ sequenceDiagram
 | API contract | `POST /v1/insight` with `project_id`, `prompt_version`, `evidence`, `images` |
 | Response | Strict JSON: summary template, hypothesis, conflicts, anomalies, recommendations, unknowns, limitations, citations, tool trace |
 | Numeric honesty | Model writes `{{estimate:name}}` placeholders; backend substitutes provenance values and rejects unsupported numbers |
-| Tool allowlist | `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec` |
+| Tool allowlist | `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`, `search_similar_recordings` |
 | Tool route | Private `/internal/dsp-tools/{tool_name}` with `X-Internal-Token` |
 | Bounds | `AI_MAX_TOOL_STEPS`, `AI_TOOL_TIMEOUT_SECONDS`, `AI_TIMEOUT_SECONDS` |
 | Images | PSD, waterfall, constellation, M-th power; PNG data URIs only; per-image and bundle caps |

@@ -38,6 +38,10 @@ class TryFecArgs(BaseModel):
     fec_type: FecType = "convolutional"
 
 
+class SearchSimilarRecordingsArgs(BaseModel):
+    limit: int = Field(default=5, ge=1, le=20)
+
+
 class ToolSpec(BaseModel):
     name: str
     description: str
@@ -108,6 +112,23 @@ TOOL_SPECS: dict[str, ToolSpec] = {
                     "type": "string",
                     "enum": ["convolutional", "reed_solomon", "ldpc", "concatenated"],
                 }
+            },
+        },
+    ),
+    "search_similar_recordings": ToolSpec(
+        name="search_similar_recordings",
+        description=(
+            "Search the analyst's own fingerprinted projects for the nearest "
+            "spectral neighbours. Returns cosine distances, the rarity "
+            "threshold, and a rare-signal candidate flag. Use when the evidence "
+            "contains a fingerprint or when the operator asks whether a signal "
+            "is novel."
+        ),
+        args_model=SearchSimilarRecordingsArgs,
+        parameters={
+            "type": "object",
+            "properties": {
+                "limit": {"type": "integer", "minimum": 1, "maximum": 20},
             },
         },
     ),

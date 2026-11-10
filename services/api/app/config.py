@@ -38,6 +38,11 @@ class Settings(BaseSettings):
     AI_MAX_IMAGE_BYTES: int = 300_000
     AI_MAX_TOTAL_IMAGE_BYTES: int = 1_000_000
 
+    # Phase 4 rare-signal gallery. Neighbour search runs over the caller's own
+    # projects only, comparing versioned spectral fingerprints.
+    FINGERPRINT_NEIGHBOR_LIMIT: int = 5
+    FINGERPRINT_RARE_DISTANCE_THRESHOLD: float = 0.35
+
     # `CORS_ORIGINS` is a string env var (comma-separated or JSON array).
     # Kept as `str` so pydantic-settings doesn't force JSON decoding of
     # complex-typed env vars across versions.

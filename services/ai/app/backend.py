@@ -142,6 +142,72 @@ def _tool_was_called(messages: list[dict[str, Any]], name: str | None = None) ->
     return False
 
 
+def _tool_result(messages: list[dict[str, Any]], name: str) -> dict[str, Any] | None:
+    """Return the inner payload of the last successful tool call, if any."""
+
+    for message in reversed(messages):
+        if message.get("role") != "tool" or message.get("name") != name:
+            continue
+        content = message.get("content")
+        try:
+            parsed = json.loads(content) if isinstance(content, str) else content
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, dict):
+            continue
+        inner = parsed.get("result")
+        return inner if isinstance(inner, dict) else None
+    return None
+
+
+def _with_similarity_note(
+    payload: dict[str, Any], similar: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Explain a gallery lookup without asserting a measurement.
+
+    The rare-signal flag is a heuristic over backend-provided distances, so the
+    wording stays comparative ("farther than the threshold") and never claims an
+    identification.
+    """
+
+    if not similar:
+        return payload
+
+    payload = dict(payload)
+    anomalies = list(payload.get("anomalies") or [])
+    limitations = list(payload.get("limitations") or [])
+
+    rare = similar.get("rare_signal")
+    if rare is True:
+        anomalies.append(
+            {
+                "description": (
+                    "The nearest gallery neighbour is farther than the similarity "
+                    "threshold, so this recording is a rare-signal candidate."
+                ),
+                "severity": "low",
+                "evidence_refs": ["similar_recordings"],
+            }
+        )
+    elif rare is False:
+        limitations.append(
+            "A similar recording exists in the gallery; novelty is not claimed."
+        )
+    else:
+        limitations.append(
+            "No comparable gallery neighbours are available yet, so novelty "
+            "cannot be assessed."
+        )
+
+    limitations.append(
+        "Similarity is a cosine distance over stored spectral fingerprints, "
+        "not an identification of a transmitter."
+    )
+    payload["anomalies"] = anomalies
+    payload["limitations"] = limitations
+    return payload
+
+
 def _fake_modulation_candidate(evidence: dict[str, Any]) -> str | None:
     estimates = _estimate_map(evidence)
     modulation = estimates.get("modulation") or {}
@@ -203,7 +269,31 @@ class FakeBackend:
                     ]
                 }
 
-        return {"content": _with_visual_note(deterministic_payload(evidence), request.images)}
+        # A stored fingerprint means a gallery lookup is possible. The fake
+        # backend performs exactly one lookup so the Phase 4 loop is exercised
+        # deterministically, then explains the result without inventing numbers.
+        if (
+            tools
+            and evidence.get("fingerprint")
+            and not evidence.get("similar_recordings")
+            and not _tool_was_called(messages, "search_similar_recordings")
+        ):
+            return {
+                "tool_calls": [
+                    {
+                        "id": "call_similar",
+                        "name": "search_similar_recordings",
+                        "arguments": {"limit": 5},
+                    }
+                ]
+            }
+
+        return {
+            "content": _with_similarity_note(
+                _with_visual_note(deterministic_payload(evidence), request.images),
+                _tool_result(messages, "search_similar_recordings"),
+            )
+        }
 
     def generate(self, request: InsightRequest) -> dict[str, Any]:
         return _with_visual_note(

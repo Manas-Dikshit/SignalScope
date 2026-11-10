@@ -11,6 +11,7 @@ import type {
   BurstDetection,
   DemoSampleItem,
   AnalysisInsight,
+  SimilarSignals,
 } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -144,6 +145,9 @@ export const projectsApi = {
     request<BurstDetection>(`/api/projects/${id}/detect-bursts`, {
       method: "POST",
     }),
+
+  similar: (id: string) =>
+    request<SimilarSignals>(`/api/projects/${id}/similar`),
 };
 
 export const jobsApi = {

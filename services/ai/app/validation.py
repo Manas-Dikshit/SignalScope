@@ -14,9 +14,20 @@ def evidence_estimate_names(evidence: dict[str, Any]) -> set[str]:
     for item in evidence.get("estimates", []) or []:
         if isinstance(item, dict) and item.get("name"):
             names.add(str(item["name"]))
-    for key in ("modulation", "symbol_rate", "symbol_rate_hz", "fec", "constellation", "snr_db"):
+    for key in (
+        "modulation",
+        "symbol_rate",
+        "symbol_rate_hz",
+        "fec",
+        "constellation",
+        "snr_db",
+        "fingerprint",
+        "similar_recordings",
+    ):
         if key in evidence:
             names.add(key)
+    if "similar_recordings" in evidence:
+        names.update({"nearest_distance", "rare_signal", "threshold"})
     deep = evidence.get("deep_analysis") or {}
     if isinstance(deep, dict):
         for key in ("modulation", "symbol_rate", "symbol_rate_hz", "fec", "constellation"):

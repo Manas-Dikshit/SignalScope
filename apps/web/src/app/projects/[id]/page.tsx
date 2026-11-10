@@ -17,6 +17,7 @@ import { RankedBars } from "@/components/RankedBar";
 import { SectionTabs } from "@/components/SectionTabs";
 import { BurstTimeline } from "@/components/BurstTimeline";
 import { InsightPanel } from "@/components/InsightPanel";
+import { SimilarSignalsPanel } from "@/components/SimilarSignalsPanel";
 import BlueprintBackground from "@/components/BlueprintBackground";
 import { formatBytes, formatDuration, formatFrequency, downsamplePair } from "@/lib/utils";
 import { useToast } from "@/components/ui/toast";
@@ -946,6 +947,9 @@ export default function AnalysisWorkspacePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Rare-signal gallery (deterministic fingerprint search) */}
+      <SimilarSignalsPanel projectId={project.id} />
 
       {/* AI analyst brief (Gemma 4, optional feature) */}
       <InsightPanel projectId={project.id} />

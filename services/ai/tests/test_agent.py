@@ -193,3 +193,57 @@ def test_no_evidence_produces_honest_brief():
     result = run_analyst(request, dispatch=_fake_dispatch)
     assert "No DSP estimates" in result.summary
     assert result.tool_trace == []
+
+
+FINGERPRINT_EVIDENCE = {
+    **EVIDENCE,
+    "fingerprint": {"version": "1", "dimensions": 22, "features": {}},
+}
+
+
+def _rare_dispatch(call: dict, project_id: str) -> dict:
+    return {
+        "tool": call.get("name"),
+        "ok": True,
+        "result": {
+            "neighbors": [
+                {
+                    "project_id": "other",
+                    "project_name": "Known QPSK",
+                    "recording_filename": "known.wav",
+                    "distance": 0.81,
+                    "similarity": 0.19,
+                }
+            ],
+            "nearest_distance": 0.81,
+            "threshold": 0.35,
+            "rare_signal": True,
+        },
+    }
+
+
+def test_fingerprint_evidence_triggers_gallery_lookup():
+    request = InsightRequest(project_id="p1", evidence=FINGERPRINT_EVIDENCE)
+    result = run_analyst(request, dispatch=_rare_dispatch)
+
+    assert len(result.tool_trace) == 1
+    entry = result.tool_trace[0]
+    assert entry["tool"] == "search_similar_recordings"
+    assert entry["arguments"] == {"limit": 5}
+    assert entry["result"]["ok"] is True
+
+
+def test_gallery_lookup_explains_rarity_without_identifying():
+    request = InsightRequest(project_id="p1", evidence=FINGERPRINT_EVIDENCE)
+    result = run_analyst(request, dispatch=_rare_dispatch)
+
+    assert any("rare-signal candidate" in a.description for a in result.anomalies)
+    assert any("not an identification" in item for item in result.limitations)
+
+
+def test_search_similar_recordings_is_allowlisted():
+    name, args = parse_tool_call(
+        {"name": "search_similar_recordings", "arguments": {"limit": 3}}
+    )
+    assert name == "search_similar_recordings"
+    assert args == {"limit": 3}

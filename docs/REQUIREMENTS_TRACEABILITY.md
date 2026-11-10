@@ -45,6 +45,7 @@ implementation.
 | 23 | Multimodal evidence images are bounded, audited, and never raw IQ | Done | `services/api/app/evidence_images.py` renders PSD/waterfall/constellation/M-th-power PNGs with Pillow; audit stores MIME, bytes, SHA-256, dimensions | `services/api/tests/test_evidence_images.py` (5) |
 | 24 | Built-in demo signal catalog loads instantly for new users | Done | `routers/recordings.py` `DEMO_CATALOG`, `/demos`, `/load-demo`; `DemoSamplesSection.tsx` | `services/api/tests/test_demo_samples.py` (2), `apps/web` vitest |
 | 25 | Dual/multi-antenna recordings get an interferometric sky vs local verdict | Done | `signalscope_dsp/interferometry/interferometric.py`; dual-antenna raw-IQ frames in `io/raw_iq_loader.py`; wired into `tasks.py` and `deep_analysis` | `services/dsp-worker/tests/test_interferometric.py` (6) |
+| 26 | Rare-signal gallery: versioned spectral fingerprint + owner-scoped nearest-neighbour search | Done | `signalscope_dsp/fingerprint/`; `signal_fingerprints` + migration `004_signal_fingerprints.py`; `api/app/fingerprints.py`; `GET /api/projects/{id}/similar`; `search_similar_recordings` tool; `SimilarSignalsPanel.tsx` | `services/dsp-worker/tests/test_fingerprint.py` (5), `services/api/tests/test_similar_signals.py` (7), `services/ai/tests/test_agent.py` (gallery lookup), `SimilarSignalsPanel.test.tsx` (3) |
 
 ## Provenance & drill-down specifics (Phase 6)
 

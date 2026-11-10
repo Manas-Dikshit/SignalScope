@@ -40,7 +40,14 @@ def estimate_parameters_task(self, project_id_str: str):
     from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
     from signalscope_dsp.detection import detect_bursts, burst_stats
 
-    from .models import Base, AnalysisProject, Recording, RecordingMetadata, ParameterEstimate
+    from .models import (
+        Base,
+        AnalysisProject,
+        Recording,
+        RecordingMetadata,
+        ParameterEstimate,
+        SignalFingerprint,
+    )
     from .database import engine as _unused  # noqa: F811
 
     # Sync engine for Celery worker. Strip async drivers so prod (asyncpg) and
@@ -139,8 +146,31 @@ def estimate_parameters_task(self, project_id_str: str):
 
         _update_progress(self, "persisting_results", 90)
 
+        # Phase 4: a versioned spectral fingerprint powers the rare-signal
+        # gallery. It is a bonus artifact — a fingerprint failure must never
+        # discard the DSP estimates that were just computed.
+        from signalscope_dsp.fingerprint import compute_fingerprint
+
+        try:
+            fingerprint = compute_fingerprint(conditioned[:200_000], sr)
+        except Exception:
+            fingerprint = None
+
         # Delete old estimates
         db.query(ParameterEstimate).filter(ParameterEstimate.project_id == project_id).delete()
+        db.query(SignalFingerprint).filter(SignalFingerprint.project_id == project_id).delete()
+        if fingerprint is not None:
+            db.add(
+                SignalFingerprint(
+                    project_id=project_id,
+                    recording_id=rec.id,
+                    version=fingerprint.version,
+                    dimensions=fingerprint.dimensions,
+                    vector_json=fingerprint.vector,
+                    embedding_json=fingerprint.embedding,
+                    features_json=fingerprint.features,
+                )
+            )
 
         # Store each Estimate as a row
         estimates_to_store = [
@@ -220,7 +250,14 @@ def generate_insight_task(self, project_id_str: str):
     from sqlalchemy.orm import sessionmaker
 
     from .ai_client import request_insight_sync
-    from .models import AnalysisInsight, AnalysisProject, ParameterEstimate, Recording, RecordingMetadata
+    from .models import (
+        AnalysisInsight,
+        AnalysisProject,
+        ParameterEstimate,
+        Recording,
+        RecordingMetadata,
+        SignalFingerprint,
+    )
 
     sync_url = settings.DATABASE_URL
     for marker in ("+asyncpg", "+aiosqlite"):
@@ -273,9 +310,27 @@ def generate_insight_task(self, project_id_str: str):
                 "run_deep_analysis",
                 "try_demodulation",
                 "try_fec",
+                "search_similar_recordings",
             ],
             "prompt_version": settings.AI_PROMPT_VERSION,
         }
+
+        fingerprint = (
+            db.query(SignalFingerprint)
+            .filter(SignalFingerprint.project_id == project_id)
+            .first()
+        )
+        if fingerprint is not None:
+            # Let the analyst decide whether to ask for neighbours. The tool
+            # result, not the prompt, carries the gallery distances.
+            evidence["fingerprint"] = {
+                "version": fingerprint.version,
+                "dimensions": fingerprint.dimensions,
+                "features": fingerprint.features_json or {},
+                "created_at": fingerprint.created_at.isoformat()
+                if fingerprint.created_at
+                else None,
+            }
 
         _update_progress(self, "rendering_images", 45)
         images: dict[str, str] = {}

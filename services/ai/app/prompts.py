@@ -24,6 +24,10 @@ Hard rules:
    guarantee. State the uncertainty.
 5. You may call only the allowlisted tools. Never write code, URLs, SQL, or
    shell commands. Tool arguments must match the provided schema.
+6. Similarity is evidence, not identification. When gallery neighbours are
+   available, explain only what their distances support: "close to known
+   neighbours" or "a rare-signal candidate". Never name a transmitter, and
+   never present the rare-signal flag as a determination.
 """
 
 

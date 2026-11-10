@@ -212,7 +212,7 @@ docker compose --profile ai up --build
 
 - Reads a structured `EvidenceBundle` built from stored DSP estimates.
 - Reasons over rendered PSD, waterfall, constellation, and M-th-power PNGs — never raw I/Q.
-- Calls only allowlisted DSP tools: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`.
+- Calls only allowlisted DSP tools: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`, `search_similar_recordings`.
 - Reports conflicts, anomalies, unknowns, limitations, and recommended next actions.
 - Produces a cited brief; every number is substituted by the backend from provenance.
 
@@ -356,7 +356,7 @@ SignalScope/
 - [x] Interferometric origin discrimination from dual-antenna IQ
 - [x] Demo signal library and app-shell UI
 - [x] Gemma 4 cited brief, agent tool loop, and multimodal evidence images
-- [ ] Rare-signal gallery / fingerprint similarity search
+- [x] Rare-signal gallery / fingerprint similarity search
 - [ ] QLoRA fine-tuning on synthetic RF evidence pairs
 - [ ] Closed-loop carrier and timing recovery (Costas / PLL / Gardner)
 - [ ] Neural-network modulation classifier

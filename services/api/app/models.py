@@ -147,6 +147,38 @@ class AnalysisInsight(Base):
     __table_args__ = (Index("ix_analysis_insights_project_created", "project_id", "created_at"),)
 
 
+class SignalFingerprint(Base):
+    """One comparable spectral fingerprint per project.
+
+    Stored so the rare-signal gallery never has to re-read a recording just to
+    answer a similarity query. ``vector_json`` is versioned; neighbours are only
+    compared when the fingerprint version matches.
+    """
+
+    __tablename__ = "signal_fingerprints"
+
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=_uuid)
+    project_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("analysis_projects.id"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    recording_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("recordings.id"), nullable=False, index=True
+    )
+    version: Mapped[str] = mapped_column(String(20), nullable=False)
+    dimensions: Mapped[int] = mapped_column(nullable=False)
+    vector_json: Mapped[list] = mapped_column(JSON, nullable=False)
+    embedding_json: Mapped[list | None] = mapped_column(JSON)
+    features_json: Mapped[dict | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+
+    __table_args__ = (Index("ix_signal_fingerprints_version", "version"),)
+
+
 class Artifact(Base):
     __tablename__ = "artifacts"
 

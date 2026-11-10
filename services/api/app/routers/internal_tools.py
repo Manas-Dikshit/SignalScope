@@ -50,6 +50,10 @@ class TryFecArgs(BaseModel):
     fec_type: FecType = "convolutional"
 
 
+class SearchSimilarRecordingsArgs(BaseModel):
+    limit: int = Field(default=5, ge=1, le=20)
+
+
 def _require_internal_token(x_internal_token: str | None = Header(default=None)) -> None:
     expected = settings.INTERNAL_API_TOKEN
     if not expected:
@@ -256,11 +260,40 @@ async def _try_demodulation(
     }
 
 
+async def _search_similar_recordings(
+    project: AnalysisProject,
+    rec: Recording,
+    meta: RecordingMetadata | None,
+    db: AsyncSession,
+    args: dict[str, Any],
+) -> dict[str, Any]:
+    """Return nearest fingerprinted recordings for the same owner.
+
+    A missing fingerprint is data, not an error: the analyst can respond by
+    recommending that parameter estimation runs first.
+    """
+
+    from ..fingerprints import FingerprintMissing, find_similar_projects
+
+    parsed = SearchSimilarRecordingsArgs.model_validate(args)
+    try:
+        return await find_similar_projects(db, project, limit=parsed.limit)
+    except FingerprintMissing as exc:
+        return {
+            "project_id": str(project.id),
+            "neighbors": [],
+            "nearest_distance": None,
+            "rare_signal": None,
+            "warnings": [str(exc)],
+        }
+
+
 _HANDLERS = {
     "get_project_evidence": _get_project_evidence,
     "run_deep_analysis": _run_deep_analysis,
     "try_demodulation": _try_demodulation,
     "try_fec": _try_fec,
+    "search_similar_recordings": _search_similar_recordings,
 }
 
 ALLOWED_TOOLS = frozenset(_HANDLERS)

@@ -76,7 +76,7 @@ text, image, and audio; the 26B/31B variants are text+image only. See
 
 ## Agent tool loop
 
-The analyst may call four allowlisted DSP tools:
+The analyst may call five allowlisted DSP tools:
 
 | Tool | Purpose |
 |---|---|
@@ -84,6 +84,7 @@ The analyst may call four allowlisted DSP tools:
 | `run_deep_analysis` | Re-run PSD/features/modulation/demod/FEC over the ROI |
 | `try_demodulation` | Try a specific PSK/QAM/FSK order |
 | `try_fec` | Try a specific FEC decoder and report convergence/CRC |
+| `search_similar_recordings` | Nearest spectral neighbours from the user's fingerprinted projects |
 
 Tool calls are bounded by `AI_MAX_TOOL_STEPS` (default 6) and per-call
 `AI_TOOL_TIMEOUT_SECONDS` (default 30). Dispatch only POSTs to the API's private

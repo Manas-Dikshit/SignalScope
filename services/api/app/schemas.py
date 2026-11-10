@@ -316,6 +316,29 @@ class AnalysisInsightResponse(BaseModel):
     created_at: datetime
 
 
+# ── Rare-signal gallery ───────────────────────────────────────────────────────
+
+class SimilarSignalNeighbor(BaseModel):
+    project_id: uuid.UUID
+    project_name: str
+    recording_filename: str
+    modulation: str | None = None
+    symbol_rate_hz: float | None = None
+    distance: float
+    similarity: float
+
+
+class SimilarSignalsResponse(BaseModel):
+    project_id: uuid.UUID
+    fingerprint: dict[str, Any]
+    neighbors: list[SimilarSignalNeighbor]
+    nearest_distance: float | None
+    threshold: float
+    rare_signal: bool | None
+    method: str
+    evidence: list[str]
+
+
 # ── Common ────────────────────────────────────────────────────────────────────
 
 class PaginatedResponse(BaseModel, Generic[T]):

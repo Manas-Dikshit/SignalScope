@@ -179,13 +179,14 @@ Every stage emits candidates with **evidence strings**. The final `Estimate` car
 - Backends: deterministic `fake` (no model download) and `transformers` (local Gemma 4). Other local runtimes (GGUF/Ollama-class) can be added behind the same `InsightBackend` protocol.
 - Default model: `google/gemma-4-E4B-it` (Apache-2.0).
 - Rendered evidence images (PSD, waterfall, constellation, M-th power) are generated with Pillow and sent as bounded PNG data URIs; raw I/Q is never sent.
-- The model may call only: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`.
+- The model may call only: `get_project_evidence`, `run_deep_analysis`, `try_demodulation`, `try_fec`, `search_similar_recordings`.
 - Tool count and duration are bounded by `AI_MAX_TOOL_STEPS` and `AI_TOOL_TIMEOUT_SECONDS`.
 - Validation enforces strict JSON schema, evidence references, numeric substitution (`{{estimate:name}}`), and allowlisted tool traces. Failures retry once, then fall back safely.
+- A versioned spectral fingerprint per project powers a rare-signal gallery (`GET /api/projects/{id}/similar`). Search is owner-scoped, uses cosine distance over a shape-normalised PSD embedding plus scalar features, and reports "similar evidence", never an identification. An empty gallery reports `rare_signal: null`.
 
 ### 6. Data layer
 
-- **PostgreSQL 16** — users, recordings, metadata, projects, jobs, parameter estimates (`value_json` + `evidence_json`), and analysis insights (`response_json`, `tool_trace_json`, `citations_json`).
+- **PostgreSQL 16** — users, recordings, metadata, projects, jobs, parameter estimates (`value_json` + `evidence_json`), analysis insights (`response_json`, `tool_trace_json`, `citations_json`), and versioned signal fingerprints (`vector_json`, `features_json`).
 - **Redis db 0** — configured via `REDIS_URL` for app cache (currently unused).
 - **Redis db 1** — Celery broker.
 - **Redis db 2** — Celery result backend and job status.

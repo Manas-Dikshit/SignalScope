@@ -3,7 +3,7 @@
 **Project:** SignalScope AI — Explainable RF Signal-Analysis Workbench  
 **Target problem statement:** Open Innovation Track 1 — **Best Use of Gemma 4**  
 **Secondary target:** Open Innovation Track 2 — **Best Open-Source AI Project**  
-**Status:** In Progress — Phases 0–3 Complete (Cited brief, agent tools, multimodal evidence)  
+**Status:** Phases 0–4 Complete (Cited brief, agent tools, multimodal evidence, rare-signal gallery). Phase 5 (QLoRA) is optional and not started.  
 **Date:** November 2026
 
 ---
@@ -16,8 +16,8 @@
 | **Phase 1** | One-Shot Cited Brief | **100% Complete** | `EvidenceBundle` extraction in `tasks.py`, `generate_insight_task`, `POST /api/projects/{id}/insights`, `render_template` numeric substitution, `InsightPanel.tsx` in UI |
 | **Phase 2** | Agent Tool Loop | **100% Complete** | Allowlisted DSP tools (`try_demodulation`, `try_fec`, `run_deep_analysis`, `get_project_evidence`), multi-step agent loop, tool execution trace |
 | **Phase 3** | Multimodal Evidence | **100% Complete** | Pillow-rendered PSD, waterfall, constellation, and M-th-power PNGs; image audit (SHA-256, bytes, dimensions); size caps |
-| **Phase 4** | Rare-Signal Gallery | *Optional* | Spectral fingerprint nearest-neighbor search |
-| **Phase 5** | QLoRA Fine-Tuning | *Optional* | Domain fine-tuning on RF evidence pairs |
+| **Phase 4** | Rare-Signal Gallery | **100% Complete** | Versioned spectral fingerprints, cosine nearest-neighbour search, `search_similar_recordings` tool, `GET /api/projects/{id}/similar`, `SimilarSignalsPanel.tsx`, AI novelty explanation |
+| **Phase 5** | QLoRA Fine-Tuning | *Optional — not started* | Domain fine-tuning on RF evidence pairs (future work) |
 
 ---
 
@@ -156,37 +156,47 @@ services/ai/
 │   ├── __init__.py
 │   ├── main.py              # FastAPI app
 │   ├── config.py            # AI_BACKEND, AI_MODEL, timeouts
-│   ├── backend.py           # transformers | ollama | llama.cpp adapter
+│   ├── backend.py           # fake | transformers adapter
 │   ├── prompts.py           # system prompt + few-shot examples
 │   ├── schemas.py           # InsightRequest / InsightResponse
-│   ├── evidence.py          # EvidenceBundle models
 │   ├── tools.py             # allowlisted DSP tool dispatch
 │   ├── agent.py             # tool-calling loop
 │   └── validation.py        # schema + citation + numeric guards
 ├── tests/
-│   ├── test_validation.py
-│   └── test_agent_loop.py
+│   ├── test_agent.py
+│   └── test_images.py
 ├── Dockerfile
+├── README.md
 └── requirements.txt
+
+services/dsp-worker/signalscope_dsp/
+└── fingerprint/
+    ├── __init__.py
+    └── fingerprint.py       # versioned spectral fingerprint + cosine distance
 
 services/api/
 ├── app/
 │   ├── ai_client.py         # HTTP client for services/ai
-│   ├── tasks.py             # add generate_insight_task
-│   ├── models.py            # add AnalysisInsight
-│   ├── schemas.py           # add insight response models
+│   ├── fingerprints.py      # owner-scoped nearest-neighbour search
+│   ├── tasks.py             # generate_insight_task + fingerprint persistence
+│   ├── models.py            # AnalysisInsight + SignalFingerprint
+│   ├── schemas.py           # insight + similar-signal response models
 │   └── routers/
-│       └── insights.py      # POST/GET insight endpoints
+│       ├── insights.py      # POST/GET insight endpoints
+│       ├── internal_tools.py# private DSP tool route (5 tools)
+│       └── similar_signals.py # GET /api/projects/{id}/similar
 └── alembic/versions/
-    └── 002_analysis_insights.py
+    ├── 003_analysis_insights.py
+    └── 004_signal_fingerprints.py
 
 apps/web/src/
 ├── components/
-│   └── InsightPanel.tsx
+│   ├── InsightPanel.tsx
+│   └── SimilarSignalsPanel.tsx
 ├── lib/
-│   ├── api.ts               # insightsApi
-│   └── types.ts             # Insight types + ai_hypothesis source
-└── app/projects/[id]/page.tsx  # mount InsightPanel
+│   ├── api.ts               # insightsApi + projectsApi.similar
+│   └── types.ts             # Insight + SimilarSignals types, ai_hypothesis source
+└── app/projects/[id]/page.tsx  # mounts InsightPanel + SimilarSignalsPanel
 
 docs/
 └── GEMMA4_IMPLEMENTATION_PLAN.md  # this file
@@ -261,6 +271,19 @@ Built by the API/worker from existing DB rows. It must contain only data the DSP
     "constellation": "data:image/png;base64,...",
     "mth_power": "data:image/png;base64,..."
   },
+  "fingerprint": {
+    "version": "1",
+    "dimensions": 22,
+    "features": {
+      "occupied_bandwidth_ratio": 0.81,
+      "spectral_flatness": 0.12,
+      "crest_factor_norm": 0.25,
+      "zero_crossing_rate": 0.08,
+      "snr_norm": 0.52,
+      "drift_ratio": 0.57
+    },
+    "created_at": "2026-11-10T12:00:00"
+  },
   "available_tools": [
     "get_project_evidence",
     "run_deep_analysis",
@@ -278,8 +301,42 @@ Rules:
 - Strip host paths from filenames before sending.
 - Treat recording metadata as untrusted text. It is data, not instructions.
 - Do not include user emails or unrelated project data.
+- `fingerprint` carries only the current project's metadata, never a precomputed neighbour list. The model must call `search_similar_recordings` to obtain distances, so every similarity claim has a tool result behind it.
 
-### 7.2 InsightResponse
+### 7.2 SimilarSignalsResponse
+
+Served by `GET /api/projects/{project_id}/similar` and by the `search_similar_recordings` tool. Distances are cosine distances over stored fingerprints; `rare_signal` is `null` when the gallery has no comparable neighbour, because rarity is not provable from a single sample.
+
+```json
+{
+  "project_id": "uuid",
+  "fingerprint": { "version": "1", "dimensions": 22, "features": {}, "created_at": "..." },
+  "neighbors": [
+    {
+      "project_id": "uuid",
+      "project_name": "Known QPSK burst",
+      "recording_filename": "capture_002.wav",
+      "modulation": "QPSK",
+      "symbol_rate_hz": 125000.0,
+      "distance": 0.03,
+      "similarity": 0.97
+    }
+  ],
+  "nearest_distance": 0.03,
+  "threshold": 0.35,
+  "rare_signal": false,
+  "method": "Cosine distance over a shape-normalised PSD embedding plus scalar spectral features. Similar evidence only, not an identification.",
+  "evidence": ["..."]
+}
+```
+
+Rules:
+
+- Search is owner-scoped: only the caller's own non-deleted projects are compared.
+- Neighbours are only compared when `version` and `dimensions` match.
+- `rare_signal` is a heuristic candidate flag, never an identification.
+
+### 7.3 InsightResponse
 
 The model must return this exact shape. Reject anything else.
 
@@ -386,7 +443,7 @@ Follow Gemma 4 guidance:
 
 ### 9.1 Tool allowlist
 
-Start with six tools. Each tool is a thin adapter over existing DSP functionality.
+Start with five implemented tools. Each tool is a thin adapter over existing DSP functionality.
 
 | Tool | Purpose | Implementation |
 |---|---|---|
@@ -394,8 +451,8 @@ Start with six tools. Each tool is a thin adapter over existing DSP functionalit
 | `run_deep_analysis` | Re-run deep analysis with a different FEC type | Existing `/api/projects/{id}/analysis` logic |
 | `try_demodulation` | Try a specific modulation/order and return BER/correlation proxy | Existing `demod_psk`, `demod_qam`, `demod_fsk` |
 | `try_fec` | Try a specific FEC decoder | Existing Viterbi/RS/LDPC/concatenated codecs |
-| `search_similar_recordings` | kNN over signal fingerprints | Optional Phase 4 |
-| `compare_to_baseline` | Compare current signal to a reference recording | Optional Phase 4 |
+| `search_similar_recordings` | kNN over stored signal fingerprints | Implemented in Phase 4 (`api/app/fingerprints.py` + private route) |
+| `compare_to_baseline` | Compare current signal to a reference recording | Not implemented; covered by the gallery instead |
 
 Every tool:
 
@@ -508,6 +565,8 @@ This guarantees the demo never shows fabricated RF values.
 | `/api/projects/{project_id}/insights` | POST | Queue an AI insight job. Returns `202 { job_id }`. |
 | `/api/projects/{project_id}/insights` | GET | Latest insight for project. |
 | `/api/projects/{project_id}/insights/history` | GET | Paginated insight history. |
+| `/api/projects/{project_id}/similar` | GET | Rare-signal gallery: nearest fingerprinted projects (owner-scoped). |
+| `/internal/dsp-tools/{tool_name}` | POST | Private allowlisted tool route (`X-Internal-Token`). |
 | `/api/health` | GET | Existing health. |
 | `services/ai /health` | GET | AI service health + loaded model name. |
 
@@ -573,11 +632,32 @@ Indexes:
 (status)
 ```
 
-### 12.2 Alembic migration
+### 12.2 Signal fingerprints (Phase 4)
 
-Add `services/api/alembic/versions/002_analysis_insights.py`.
+```text
+signal_fingerprints
+├── id                UUID PK
+├── project_id        UUID FK -> analysis_projects.id (unique)
+├── recording_id      UUID FK -> recordings.id
+├── version           VARCHAR(20)   # fingerprint algorithm version
+├── dimensions        INTEGER
+├── vector_json       JSON          # unit vector used for cosine distance
+├── embedding_json    JSON          # human-inspectable 16-bin PSD shape
+├── features_json     JSON          # scalar spectral features
+├── created_at        TIMESTAMP
+└── updated_at        TIMESTAMP
+```
 
-### 12.3 Provenance source
+Indexes: `project_id` (unique), `recording_id`, `version`.
+
+Fingerprints are recomputed as part of `estimate_parameters_task` and replaced on each run. A fingerprint failure is logged but never fails the DSP job.
+
+### 12.3 Alembic migrations
+
+- `services/api/alembic/versions/003_analysis_insights.py` — `analysis_insights`.
+- `services/api/alembic/versions/004_signal_fingerprints.py` — `signal_fingerprints` (idempotent, for databases that created it via `create_all`).
+
+### 12.4 Provenance source
 
 Add to `services/dsp-worker/signalscope_dsp/common.py`:
 
@@ -654,8 +734,15 @@ AI_BACKEND=fake            # fake | transformers
 AI_TIMEOUT_SECONDS=120
 AI_MAX_TOOL_STEPS=6
 AI_TOOL_TIMEOUT_SECONDS=30
+AI_EVIDENCE_IMAGES_ENABLED=true
+AI_MAX_IMAGE_BYTES=300000
+AI_MAX_TOTAL_IMAGE_BYTES=1000000
 API_INTERNAL_URL=http://api:8000
 INTERNAL_API_TOKEN=change-me   # empty disables the private tool route
+
+# Rare-signal gallery (deterministic spectral-fingerprint nearest neighbours)
+FINGERPRINT_NEIGHBOR_LIMIT=5
+FINGERPRINT_RARE_DISTANCE_THRESHOLD=0.35
 ```
 
 ### 14.2 Compose service
@@ -769,23 +856,31 @@ Acceptance:
 - Raw IQ is never sent to the model. (API sends PNG data URIs only; AI schema rejects non-image URIs)
 - Image payload stays under a defined size cap. (Per-image `AI_MAX_IMAGE_BYTES`, bundle `AI_MAX_TOTAL_IMAGE_BYTES`)
 
-### Phase 4 — Rare-signal gallery (optional, 4–6 hours)
+### Phase 4 — Rare-signal gallery (4–6 hours) — [COMPLETE]
 
 Tasks:
 
-- [ ] Store a fingerprint per recording: spectral features + spectrogram embedding.
-- [ ] Add `search_similar_recordings` tool.
-- [ ] Add nearest-neighbor distance and threshold.
-- [ ] Add a “Rare signal candidate” panel.
-- [ ] Gemma 4 explains novelty using neighbors + DSP evidence.
+- [x] Store a fingerprint per recording: spectral features + spectrogram embedding. (Delivered: `signalscope_dsp/fingerprint/fingerprint.py`, `signal_fingerprints` table + migration `004_signal_fingerprints.py`, persisted in `estimate_parameters_task`)
+- [x] Add `search_similar_recordings` tool. (Delivered: `services/ai/app/tools.py` spec + `internal_tools.py` handler)
+- [x] Add nearest-neighbor distance and threshold. (Delivered: cosine distance in `api/app/fingerprints.py`; `FINGERPRINT_RARE_DISTANCE_THRESHOLD`)
+- [x] Add a “Rare signal candidate” panel. (Delivered: `apps/web/src/components/SimilarSignalsPanel.tsx`, mounted on the project page)
+- [x] Gemma 4 explains novelty using neighbors + DSP evidence. (Delivered: `FakeBackend` gallery lookup + `_with_similarity_note`; prompt rule 6)
 
 Acceptance:
 
-- A synthetic outlier is flagged as distant from known recordings.
-- Explanation cites both visual and DSP evidence.
-- No claim of certainty; output remains a hypothesis.
+- A synthetic outlier is flagged as distant from known recordings. (Verified: `test_spectrally_different_signal_is_a_rare_candidate`; chirp ≈ 1.59 vs same-family QPSK ≈ 0.03)
+- Explanation cites both visual and DSP evidence. (Verified: tool trace + `similar_recordings` refs in anomalies/limitations)
+- No claim of certainty; output remains a hypothesis. (Verified: comparative wording, `ai_hypothesis` labelling)
 
-### Phase 5 — Fine-tuning (optional, 1–2 days)
+Notes:
+
+- Fingerprints are deterministic and explainable (shape-normalised 16-bin PSD embedding, weight 0.7, plus 6 scalar features, weight 0.3). No learned model, no random seed.
+- The gallery is owner-scoped and ignores soft-deleted projects.
+- An empty gallery returns `rare_signal: null`; the UI and the model both say novelty cannot be assessed yet.
+
+### Phase 5 — Fine-tuning (optional, 1–2 days) — [NOT STARTED]
+
+Kept as future work. Nothing in this phase ships today, and the product does not depend on it.
 
 Tasks:
 
@@ -808,15 +903,17 @@ Acceptance:
 
 ### Unit tests
 
-- `test_validation.py`
+- `services/ai/tests/test_agent.py` (validation + agent loop live here; there is no separate `test_validation.py`)
   - rejects missing evidence refs
   - rejects unsupported numbers
   - accepts valid placeholder substitution
   - rejects non-allowlisted tool names
-- `test_agent_loop.py`
   - stops at max steps
-  - handles tool timeout
   - returns deterministic fallback on repeated invalid output
+  - triggers exactly one gallery lookup when a fingerprint is present
+  - explains novelty without claiming identification
+- `services/ai/tests/test_images.py`
+  - rejects non-image data URIs and oversized payloads
 
 ### API tests
 
@@ -824,11 +921,16 @@ Acceptance:
 - Unauthorized user cannot create/read insights.
 - `GET /insights` returns latest row only for owner.
 - `AI_ENABLED=false` returns a clear 503 or deterministic fallback, not a crash.
+- `GET /api/projects/{id}/similar` returns 404 until a fingerprint exists.
+- Similar neighbours are ranked, owner-scoped, and 403 for other users (`test_similar_signals.py`).
+- An empty gallery returns `rare_signal: null`.
+- The private `search_similar_recordings` tool returns neighbours and handles a missing fingerprint.
 
 ### DSP tests
 
-- Existing 69 tests still pass.
+- Existing tests still pass.
 - `Source.AI_HYPOTHESIS` serializes correctly.
+- Fingerprint is deterministic; same-family signals are close; a chirp outlier exceeds the threshold (`test_fingerprint.py`).
 
 ### Frontend tests
 
@@ -836,6 +938,7 @@ Acceptance:
 - AI badge is visible.
 - Fallback state is visible.
 - No AI content is rendered as `measured`.
+- `SimilarSignalsPanel` flags a rare candidate, lists neighbours, does not claim rarity for an empty gallery, and explains a missing fingerprint.
 
 ### Manual demo tests
 
@@ -928,8 +1031,10 @@ The Gemma 4 integration is demo-ready when:
 - [x] Low-confidence cases trigger at least one real DSP tool call. (Verified: `test_low_confidence_modulation_triggers_follow_up_tool` + private DSP tool route)
 - [x] Multimodal evidence is capped, audited, and never sends raw IQ. (Verified: `test_evidence_images.py`, `test_images.py`, image audit in `generate_insight_task`)
 - [x] AI output is visibly labeled as a hypothesis. (Verified: `ai_hypothesis` badge in UI)
+- [x] A rare-signal gallery compares the project against the user's own fingerprinted projects. (Verified: `GET /api/projects/{id}/similar`, `SimilarSignalsPanel.tsx`)
+- [x] Similarity is never presented as identification, and an empty gallery does not claim rarity. (Verified: `rare_signal: null` + comparative AI wording)
 - [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` chat/vision path ready)
-- [x] Existing DSP, API, AI, and frontend tests pass. (Verified: 69 DSP, 51 API, 19 AI, 26 frontend tests)
+- [x] Existing DSP, API, AI, and frontend tests pass. (Verified: 74 DSP, 58 API, 22 AI, 29 frontend tests)
 - [x] README and demo docs state the model, license, and limitations. (Verified: `README.md`, `RUN.md`, `docs/LOCAL_SETUP.md`, `services/ai/README.md`)
 
 ---

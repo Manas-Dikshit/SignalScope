@@ -289,6 +289,34 @@ export interface AnalysisInsight {
   created_at: string;
 }
 
+/* ── Rare-signal gallery (Phase 4) ────────────────────────────────────── */
+
+export interface SimilarSignalNeighbor {
+  project_id: string;
+  project_name: string;
+  recording_filename: string;
+  modulation: string | null;
+  symbol_rate_hz: number | null;
+  distance: number;
+  similarity: number;
+}
+
+export interface SimilarSignals {
+  project_id: string;
+  fingerprint: {
+    version: string;
+    dimensions: number;
+    features: Record<string, number | null>;
+    created_at: string | null;
+  };
+  neighbors: SimilarSignalNeighbor[];
+  nearest_distance: number | null;
+  threshold: number;
+  rare_signal: boolean | null;
+  method: string;
+  evidence: string[];
+}
+
 export interface UploadPayload {
   file: File;
   format: "wav" | "raw_iq" | "sigmf";
