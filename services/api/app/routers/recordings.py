@@ -41,10 +41,50 @@ def _safe_filename(name: str) -> str:
     return name or "upload"
 
 
-async def _validate_and_load(path: str, loader: str, params: dict):
+_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+
+async def _save_stream(upload: UploadFile, dest: Path, max_bytes: int) -> tuple[str, int]:
+    """Stream an upload to disk while hashing and enforcing the size cap.
+
+    Reading in chunks keeps peak memory bounded regardless of file size, and the
+    cap is enforced before writing past it (the partial file is removed).
+    """
+    hasher = hashlib.sha256()
+    size = 0
+    try:
+        with dest.open("wb") as fh:
+            while True:
+                chunk = await upload.read(_UPLOAD_CHUNK_BYTES)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > max_bytes:
+                    raise HTTPException(status_code=413, detail="File too large")
+                hasher.update(chunk)
+                fh.write(chunk)
+    except BaseException:
+        dest.unlink(missing_ok=True)
+        raise
+    return hasher.hexdigest(), size
+
+
+async def _validate_and_load(
+    path: str,
+    loader: str,
+    params: dict,
+    *,
+    sample_offset: int = 0,
+    max_samples: int | None = None,
+):
     """Try loading the file with the DSP loader to validate it. Returns the Recording."""
     if loader == "wav":
-        return load_wav(path, stereo_mode=params.get("stereo_mode", "left_is_i_right_is_q"))
+        return load_wav(
+            path,
+            stereo_mode=params.get("stereo_mode", "left_is_i_right_is_q"),
+            sample_offset=sample_offset,
+            max_samples=max_samples,
+        )
     elif loader == "raw_iq":
         fmt = RawIQFormat(
             dtype=params.get("dtype", "int16"),
@@ -54,9 +94,9 @@ async def _validate_and_load(path: str, loader: str, params: dict):
             sample_rate_hz=params.get("sample_rate_hz"),
             center_frequency_hz=params.get("center_frequency_hz"),
         )
-        return load_raw_iq(path, fmt)
+        return load_raw_iq(path, fmt, sample_offset=sample_offset, max_samples=max_samples)
     elif loader == "sigmf":
-        return load_sigmf(path)
+        return load_sigmf(path, sample_offset=sample_offset, max_samples=max_samples)
     else:
         raise HTTPException(status_code=400, detail=f"Unknown loader: {loader}")
 
@@ -95,35 +135,37 @@ async def upload_recording(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    # Read and hash
-    contents = await file.read()
-    if len(contents) > settings.MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="File too large")
-
-    file_hash = hashlib.sha256(contents).hexdigest()
+    # Persist to disk in bounded chunks while hashing.
+    rec_id = uuid.uuid4()
+    upload_dir = Path(settings.DATA_DIR) / "uploads" / str(user.id) / str(rec_id)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    storage_path = upload_dir / _safe_filename(file.filename)
+    try:
+        file_hash, file_size = await _save_stream(file, storage_path, settings.MAX_UPLOAD_BYTES)
+    except HTTPException:
+        shutil.rmtree(upload_dir, ignore_errors=True)
+        raise
 
     # Duplicate check for this user
     existing = await db.execute(
         select(Recording).where(Recording.file_hash == file_hash, Recording.uploaded_by == user.id)
     )
     if existing.scalar_one_or_none():
+        shutil.rmtree(upload_dir, ignore_errors=True)
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Duplicate file already uploaded")
-
-    # Persist to disk
-    rec_id = uuid.uuid4()
-    upload_dir = Path(settings.DATA_DIR) / "uploads" / str(user.id) / str(rec_id)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    storage_path = upload_dir / _safe_filename(file.filename)
-    storage_path.write_bytes(contents)
 
     # SigMF uploads carry the .sigmf-data file in a second multipart part; store it
     # next to the meta file so load_sigmf can find it (it looks for <base>.sigmf-data).
     if loader == "sigmf" and data_file is not None and data_file.filename:
-        data_contents = await data_file.read()
-        if len(data_contents) > settings.MAX_UPLOAD_BYTES:
+        try:
+            await _save_stream(
+                data_file,
+                upload_dir / _safe_filename(data_file.filename),
+                settings.MAX_UPLOAD_BYTES,
+            )
+        except HTTPException:
             shutil.rmtree(upload_dir, ignore_errors=True)
-            raise HTTPException(status_code=413, detail="Data file too large")
-        (upload_dir / _safe_filename(data_file.filename)).write_bytes(data_contents)
+            raise
 
     # Validate with DSP loader
     params_raw = raw_iq_params if loader == "raw_iq" else wav_params if loader == "wav" else "{}"
@@ -133,7 +175,9 @@ async def upload_recording(
         shutil.rmtree(upload_dir, ignore_errors=True)
         raise HTTPException(status_code=422, detail="Invalid params JSON")
     try:
-        rec = await _validate_and_load(str(storage_path), loader, params)
+        # Validation only needs a bounded sample window; metadata still reports
+        # the full file's sample count and duration.
+        rec = await _validate_and_load(str(storage_path), loader, params, max_samples=100_000)
     except Exception as exc:
         shutil.rmtree(upload_dir, ignore_errors=True)
         raise HTTPException(status_code=422, detail=f"File validation failed: {exc}")
@@ -144,7 +188,7 @@ async def upload_recording(
         original_filename=file.filename,
         storage_path=str(storage_path),
         file_hash=file_hash,
-        file_size=len(contents),
+        file_size=file_size,
         file_format=file_format,
         uploaded_by=user.id,
         status="uploaded",
@@ -292,7 +336,7 @@ async def preview_recording(
                 }
             elif loader == "wav":
                 params = {"stereo_mode": meta.raw_metadata_json.get("stereo_mode", "left_is_i_right_is_q")}
-        loaded = await _validate_and_load(path, loader, params)
+        loaded = await _validate_and_load(path, loader, params, max_samples=10_000)
     except Exception:
         raise HTTPException(status_code=500, detail="Could not load recording for preview")
 

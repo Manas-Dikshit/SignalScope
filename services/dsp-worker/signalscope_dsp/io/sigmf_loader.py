@@ -20,12 +20,20 @@ SIGMF_DTYPES = {
 }
 
 
-def load_sigmf(meta_path: str | Path) -> Recording:
+def load_sigmf(
+    meta_path: str | Path,
+    *,
+    sample_offset: int = 0,
+    max_samples: int | None = None,
+) -> Recording:
     """Load a .sigmf-meta + .sigmf-data pair.
 
     SigMF is the preferred format because it is self-describing: sample rate and
     center frequency, if present, are trusted as exact metadata rather than
     estimated.
+
+    `sample_offset` / `max_samples` express a bounded complex-sample window;
+    `metadata.total_samples` still reports the full data-file length.
     """
     meta_path = Path(meta_path)
     with open(meta_path) as f:
@@ -42,9 +50,23 @@ def load_sigmf(meta_path: str | Path) -> Recording:
     if not data_path.exists():
         raise FileNotFoundError(f"Could not locate SigMF data file next to {meta_path}")
 
+    sample_offset = max(0, sample_offset)
+    byte_size = data_path.stat().st_size
+    read_offset = 0
+    read_count = -1 if max_samples is None else max_samples
+
     if dtype_str in ("ci16_le", "ci8"):
         sub_dtype = np.int16 if dtype_str == "ci16_le" else np.int8
-        raw = np.fromfile(data_path, dtype=sub_dtype).astype(np.float64)
+        itemsize = np.dtype(sub_dtype).itemsize
+        scalars = byte_size // itemsize
+        total_samples = scalars // 2
+        read_offset = sample_offset * 2 * itemsize
+        read_count = -1 if max_samples is None else max_samples * 2
+        raw = np.fromfile(
+            data_path, dtype=sub_dtype, count=read_count, offset=read_offset
+        ).astype(np.float64)
+        if len(raw) % 2 != 0:
+            raw = raw[:-1]
         max_val = np.iinfo(sub_dtype).max
         raw /= max_val
         i, q = raw[0::2], raw[1::2]
@@ -52,7 +74,12 @@ def load_sigmf(meta_path: str | Path) -> Recording:
         is_complex = True
     else:
         np_dtype, is_complex = SIGMF_DTYPES.get(dtype_str, (np.complex64, True))
-        raw = np.fromfile(data_path, dtype=np_dtype)
+        itemsize = np.dtype(np_dtype).itemsize
+        total_samples = byte_size // itemsize
+        read_offset = sample_offset * itemsize
+        raw = np.fromfile(
+            data_path, dtype=np_dtype, count=read_count, offset=read_offset
+        )
         if is_complex:
             samples = raw.astype(np.complex64)
         else:
@@ -85,8 +112,12 @@ def load_sigmf(meta_path: str | Path) -> Recording:
         is_complex=is_complex,
         channel_count=1,
         sample_dtype=dtype_str,
-        duration_seconds=(len(samples) / sample_rate) if sample_rate else None,
-        total_samples=len(samples),
-        extra={"sigmf_global": global_info, "sigmf_captures": captures},
+        duration_seconds=(total_samples / sample_rate) if sample_rate else None,
+        total_samples=total_samples,
+        extra={
+            "sigmf_global": global_info,
+            "sigmf_captures": captures,
+            "loaded_samples": len(samples),
+        },
     )
     return Recording(samples=samples, metadata=metadata, source_path=str(data_path))
