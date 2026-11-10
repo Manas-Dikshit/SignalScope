@@ -8,6 +8,7 @@ from .routers import insights as insights_router
 from .routers import internal_tools as internal_tools_router
 from .routers import jobs as jobs_router
 from .routers import projects as projects_router
+from .routers import prioritization as prioritization_router
 from .routers import recordings as recordings_router
 from .routers import similar_signals as similar_signals_router
 
@@ -36,3 +37,4 @@ app.include_router(similar_signals_router.router)
 app.include_router(internal_tools_router.router)
 app.include_router(jobs_router.router)
 app.include_router(dashboard_router.router)
+app.include_router(prioritization_router.router)

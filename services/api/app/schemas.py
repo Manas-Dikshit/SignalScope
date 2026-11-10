@@ -339,6 +339,30 @@ class SimilarSignalsResponse(BaseModel):
     evidence: list[str]
 
 
+# ── Candidate prioritization (celestial signals) ─────────────────────────────
+
+class CandidatePriority(BaseModel):
+    project_id: uuid.UUID
+    project_name: str
+    created_at: datetime | None = None
+    composite: float
+    novelty: float
+    repeatability: float
+    plausibility: float
+    feasibility: float
+    repeats: int
+    nearest_distance: float | None
+    rare_signal: bool | None
+    reasons: list[str]
+
+
+class PrioritizedCandidatesResponse(BaseModel):
+    threshold: float
+    candidates: list[CandidatePriority]
+    method: str
+    evidence: list[str]
+
+
 # ── Common ────────────────────────────────────────────────────────────────────
 
 class PaginatedResponse(BaseModel, Generic[T]):
