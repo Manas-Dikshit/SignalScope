@@ -29,6 +29,7 @@ cp apps/web/.env.example apps/web/.env.local
 
 # Generate a real secret and put it in .env as SECRET_KEY
 openssl rand -hex 32
+# No openssl? Use: python -c "import secrets; print(secrets.token_hex(32))"
 
 # 1. Build + start (dev overlay = API/worker hot-reload)
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
