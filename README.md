@@ -378,6 +378,7 @@ SignalScope/
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design, layers, sequence flow, deployment topology |
 | [`detailedarch.md`](./detailedarch.md) | Low-level service, port, data-store, and DSP-stage view |
 | [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) | Local Docker/native setup and configuration reference |
+| [`docs/DEPLOYMENT.md`](./docs/DEPLOYMENT.md) | Production deployment guide: Docker Compose, Caddy SSL reverse proxy, and cloud VPS |
 | [`docs/REQUIREMENTS_TRACEABILITY.md`](./docs/REQUIREMENTS_TRACEABILITY.md) | Requirement → implementation → test mapping |
 | [`opensourceAI.md`](./opensourceAI.md) | Open-source/open-weight AI integration: model, harness, guardrails, challenge-rules mapping |
 | [`docs/GEMMA4_IMPLEMENTATION_PLAN.md`](./docs/GEMMA4_IMPLEMENTATION_PLAN.md) | Gemma 4 phases, contracts, guardrails, demo script |
