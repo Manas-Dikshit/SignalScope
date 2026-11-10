@@ -74,6 +74,35 @@ def test_load_raw_iq_bounded_window(tmp_path):
     assert rec.samples[0].imag == pytest.approx(q[100] / 32767)
 
 
+def test_load_raw_iq_separate_iq_bounded_window(tmp_path):
+    n = 1000
+    i = (np.arange(n) % 100).astype(np.int16)
+    q = (-(np.arange(n) % 50)).astype(np.int16)
+    path = tmp_path / "separate.iq"
+    np.concatenate([i, q]).tofile(path)
+
+    fmt = RawIQFormat(dtype="int16", layout="separate_iq", sample_rate_hz=1_000_000)
+    rec = load_raw_iq(path, fmt, sample_offset=100, max_samples=50)
+
+    assert len(rec.samples) == 50
+    assert rec.metadata.total_samples == n
+    assert rec.samples[0].real == pytest.approx(i[100] / 32767)
+    assert rec.samples[0].imag == pytest.approx(q[100] / 32767)
+
+
+def test_load_raw_iq_real_only_bounded_window(tmp_path):
+    path = tmp_path / "real.iq"
+    np.arange(100, dtype=np.uint8).tofile(path)
+
+    fmt = RawIQFormat(dtype="uint8", layout="real_only", sample_rate_hz=1_000_000)
+    rec = load_raw_iq(path, fmt, sample_offset=10, max_samples=5)
+
+    assert len(rec.samples) == 5
+    assert rec.metadata.is_complex is False
+    assert rec.metadata.total_samples == 100
+    assert np.allclose(rec.samples.imag, 0)
+
+
 def test_load_wav_bounded_window(tmp_path):
     fs = 8000
     t = np.arange(fs)

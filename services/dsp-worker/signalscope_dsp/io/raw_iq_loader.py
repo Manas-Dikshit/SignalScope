@@ -128,19 +128,20 @@ def load_raw_iq(
         q = raw[1::2]
         is_complex = True
 
+    has_quadrature = fmt.layout != "real_only"
     if fmt.dtype in ("uint8", "uint16") and fmt.signed_offset:
         midpoint = float(np.iinfo(DTYPE_MAP[fmt.dtype]).max + 1) / 2.0
         i = (i.astype(np.float64) - midpoint) / midpoint
-        q = (q.astype(np.float64) - midpoint) / midpoint
+        q = (q.astype(np.float64) - midpoint) / midpoint if has_quadrature else np.zeros_like(i)
     else:
         if not np.issubdtype(DTYPE_MAP[fmt.dtype], np.floating):
             info = np.iinfo(DTYPE_MAP[fmt.dtype])
             scale = max(abs(info.min), info.max)
             i = i.astype(np.float64) / scale
-            q = q.astype(np.float64) / scale
+            q = q.astype(np.float64) / scale if has_quadrature else np.zeros_like(i)
         else:
             i = i.astype(np.float64)
-            q = q.astype(np.float64)
+            q = q.astype(np.float64) if has_quadrature else np.zeros_like(i)
 
     complex_samples = (i + 1j * q).astype(np.complex64)
 

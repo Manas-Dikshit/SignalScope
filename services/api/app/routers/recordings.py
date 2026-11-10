@@ -8,6 +8,8 @@ import uuid
 from pathlib import Path
 
 import numpy as np
+from pydantic import BaseModel
+from scipy.io import wavfile
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,6 +35,7 @@ router = APIRouter(prefix="/api/recordings", tags=["recordings"])
 # ── DSP loaders (imported lazily in the validation call) ──────────────────────
 
 from signalscope_dsp.io import load_wav, load_raw_iq, RawIQFormat, load_sigmf  # noqa: E402
+from signalscope_dsp.synth import SynthConfig, generate_signal  # noqa: E402
 
 
 def _safe_filename(name: str) -> str:

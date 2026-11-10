@@ -127,7 +127,7 @@ See [`docs/LOCAL_SETUP.md`](docs/LOCAL_SETUP.md) for a full walkthrough.
 
 | Suite | Command | Scope |
 |-------|---------|-------|
-| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | 55 tests — loading, modulation/demodulation BER, FEC (convolutional, Reed–Solomon, LDPC, concatenated), de-interleaving (incl. diagonal + pseudo-random), proof spectra, kHz–GHz band coverage |
+| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | 57 tests - loading, modulation/demodulation BER, FEC (convolutional, Reed-Solomon, LDPC, concatenated), de-interleaving (incl. diagonal + pseudo-random), proof spectra, kHz-GHz band coverage, bounded-window loading |
 | API | `cd services/api && python -m pytest tests/ -q` | 32 tests — auth, upload, projects, jobs, isolation, evidence-proof payloads, FEC-type dispatch |
 | Frontend | `cd apps/web && npm test` | Vitest + RTL — provenance badge, file-format inference, proof summarization, frequency formatting |
 

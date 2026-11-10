@@ -812,7 +812,7 @@ Acceptance:
 
 ### DSP tests
 
-- Existing 55 tests still pass.
+- Existing 57 tests still pass.
 - `Source.AI_HYPOTHESIS` serializes correctly.
 
 ### Frontend tests
