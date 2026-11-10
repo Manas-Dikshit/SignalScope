@@ -5,9 +5,10 @@ its status, and the test that guards it. Status: **Done** (verified),
 **Partial** (works but narrowed/approximated), **Deferred** (explicitly out of
 scope with reason).
 
-Source of truth for the "system must" list is `README.md` (Pipeline &
-Provenance Model, Scope & Limitations); the Phase-6 rows are the gap list
-assigned for this milestone.
+Source of truth for the "system must" list is `README.md` (Why SignalScope,
+Provenance model, Scope and limitations); the Phase-6 rows are the gap list
+assigned for that milestone. The AI and interferometry rows cover the current
+implementation.
 
 ## Core system requirements
 
@@ -17,7 +18,7 @@ assigned for this milestone.
 | 2 | Load WAV, raw I/Q, and SigMF (`-meta` + `-data`) | Done | `signalscope_dsp/io/` (`load_wav`, `load_raw_iq`, `load_sigmf`) | `tests/test_io.py` |
 | 3 | Offline, private — 100% local processing | Done | Whole pipeline runs inside `services/dsp-worker`; no external calls | `ARCHITECTURE.md` |
 | 4 | End-to-end chain: burst detection → spectral features → modulation → symbol rate → demodulation → de-interleaving → FEC → bit correlation | Done | `services/api/app/tasks.py` (full-file job) + `routers/projects.py` `deep_analysis` (capped-window interactive) | `test_projects.py::test_deep_analysis`, `tests/test_evidence.py` |
-| 5 | Self-verifying synthetic signal generator | Done | `signalscope_dsp/generate/` | `tests/` BER round-trips (BPSK/QPSK/16-QAM/2-FSK) |
+| 5 | Self-verifying synthetic signal generator | Done | `signalscope_dsp/synth/` | `tests/` BER round-trips (BPSK/QPSK/16-QAM/2-FSK) |
 | 6 | Every number has a `source`, `confidence`, and readable evidence in the UI | Done | `MetricCard`/`RankedBars`/`ProvenanceBadge` in `apps/web`; `docs/REQUIREMENTS_TRACEABILITY.md` | `apps/web/src/lib/__tests__/proof.test.ts` |
 
 ## FEC / coding requirements (Phase 6)
@@ -34,6 +35,17 @@ assigned for this milestone.
 | 14 | Cross-format machine learning support (joint IQ + WAV training) | Deferred | Neural classifier is a documented future milestone; joint-format training deliberately skipped — see `ARCHITECTURE.md` roadmap + `README.md` Scope | Reason recorded in `docs/DESIGN_NOTES.md` |
 | 15 | Evidence drill-down ("View proof") behind every confidence-bearing estimate | Done | Backend: `proof` payloads (`mth_power_spectrum`, `symbol_clock_spectrum`, run-length histograms) persisted in `evidence_json`; UI: `ProofPanel` (inline expand desktop, bottom-sheet ≤375 px, JSON download) wired into `MetricCard`, the modulation hypothesis card, de-interleave candidates, FEC result, and persisted estimate grid | `services/api/tests/test_evidence.py` (3), `apps/web` vitest |
 
+## AI, demo, and interferometry requirements
+
+| # | Requirement | Status | Where | Verification |
+|---|-------------|--------|-------|--------------|
+| 20 | Optional local Gemma 4 analyst produces a cited brief over DSP evidence | Done | `services/ai` (`/v1/insight`), `services/api/app/tasks.py::generate_insight_task`, `routers/insights.py`, `InsightPanel.tsx` | `services/ai/tests/test_agent.py` (14), `services/api/tests/test_insights.py` (5) |
+| 21 | AI output is labelled `ai_hypothesis` and numbers are backend-substituted | Done | `signalscope_dsp.common.Source.AI_HYPOTHESIS`; `services/ai/app/validation.py` `render_template` + numeric guard; `ProvenanceBadge.tsx` | `services/ai/tests/test_agent.py`, `apps/web` `ProvenanceBadge.test.tsx` |
+| 22 | Agent may only call allowlisted DSP tools with bounded steps/timeouts | Done | `services/ai/app/tools.py`; private `routers/internal_tools.py` route; `AI_MAX_TOOL_STEPS` + `AI_TOOL_TIMEOUT_SECONDS` | `services/ai/tests/test_agent.py` (low-confidence follow-up, max-step, timeout), `services/api/tests/test_internal_tools.py` (7) |
+| 23 | Multimodal evidence images are bounded, audited, and never raw IQ | Done | `services/api/app/evidence_images.py` renders PSD/waterfall/constellation/M-th-power PNGs with Pillow; audit stores MIME, bytes, SHA-256, dimensions | `services/api/tests/test_evidence_images.py` (5) |
+| 24 | Built-in demo signal catalog loads instantly for new users | Done | `routers/recordings.py` `DEMO_CATALOG`, `/demos`, `/load-demo`; `DemoSamplesSection.tsx` | `services/api/tests/test_demo_samples.py` (2), `apps/web` vitest |
+| 25 | Dual/multi-antenna recordings get an interferometric sky vs local verdict | Done | `signalscope_dsp/interferometry/interferometric.py`; dual-antenna raw-IQ frames in `io/raw_iq_loader.py`; wired into `tasks.py` and `deep_analysis` | `services/dsp-worker/tests/test_interferometric.py` (6) |
+
 ## Provenance & drill-down specifics (Phase 6)
 
 | # | Proof attached to | Payload | Where the proof is produced |
@@ -45,9 +57,11 @@ assigned for this milestone.
 
 ## Honest status summary
 
-- **Done (19/19 rows fully verified)** except rows 6 (UI verified by shared util
-  tests + manual workspace check) and 14 which is an intentional deferral.
+- **Done: 24/25 rows.** Row 14 is an intentional deferral. Row 6's UI behavior
+  is verified by shared utility tests plus a manual workspace check.
 - **Deferred:** only cross-format neural training (row 14), with the reasoning
   recorded in docs. No other claimed requirement is silently dropped — what is
   partial is labelled (e.g. symbol-clock proof is produced for the full-file
   job, while the interactive endpoint proves modulation only to keep GET fast).
+- **Current suites:** 69 DSP, 51 API, 19 AI, 26 frontend (165 total). See
+  `RUN.md` for commands; AI and API rows above map directly to those tests.

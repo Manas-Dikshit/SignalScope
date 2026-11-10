@@ -127,7 +127,8 @@ def _with_visual_note(payload: dict[str, Any], images: dict[str, str] | None) ->
     ]
     hypothesis = dict(payload.get("hypothesis") or {})
     note = str(hypothesis.get("confidence_note") or "").strip()
-    hypothesis["confidence_note"] = (note + " Visual evidence reviewed.").strip()
+    visual = "Visual evidence reviewed: " + ", ".join(sorted(images)) + "."
+    hypothesis["confidence_note"] = (note + " " + visual).strip()
     payload["hypothesis"] = hypothesis
     return payload
 

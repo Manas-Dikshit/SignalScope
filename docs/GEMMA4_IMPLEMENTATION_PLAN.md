@@ -3,7 +3,7 @@
 **Project:** SignalScope AI — Explainable RF Signal-Analysis Workbench  
 **Target problem statement:** Open Innovation Track 1 — **Best Use of Gemma 4**  
 **Secondary target:** Open Innovation Track 2 — **Best Open-Source AI Project**  
-**Status:** In Progress — Phase 0 & Phase 1 Complete (One-shot Cited Brief Operational)  
+**Status:** In Progress — Phases 0–3 Complete (Cited brief, agent tools, multimodal evidence)  
 **Date:** November 2026
 
 ---
@@ -14,8 +14,8 @@
 | :--- | :--- | :--- | :--- |
 | **Phase 0** | Setup & Guardrails | **100% Complete** | `services/ai` skeleton, `FakeBackend`, `TransformersBackend`, Docker Compose `ai` profile, Alembic `003_analysis_insights.py`, `ai_hypothesis` source enum |
 | **Phase 1** | One-Shot Cited Brief | **100% Complete** | `EvidenceBundle` extraction in `tasks.py`, `generate_insight_task`, `POST /api/projects/{id}/insights`, `render_template` numeric substitution, `InsightPanel.tsx` in UI |
-| **Phase 2** | Agent Tool Loop | *Next Up* | Allowlisted DSP tools (`try_demodulation`, `try_fec`, `run_deep_analysis`), multi-step agent loop, tool execution trace |
-| **Phase 3** | Multimodal Evidence | *Planned* | Rendered PSD, spectrogram, constellation image inputs to Gemma 4 |
+| **Phase 2** | Agent Tool Loop | **100% Complete** | Allowlisted DSP tools (`try_demodulation`, `try_fec`, `run_deep_analysis`, `get_project_evidence`), multi-step agent loop, tool execution trace |
+| **Phase 3** | Multimodal Evidence | **100% Complete** | Pillow-rendered PSD, waterfall, constellation, and M-th-power PNGs; image audit (SHA-256, bytes, dimensions); size caps |
 | **Phase 4** | Rare-Signal Gallery | *Optional* | Spectral fingerprint nearest-neighbor search |
 | **Phase 5** | QLoRA Fine-Tuning | *Optional* | Domain fine-tuning on RF evidence pairs |
 
@@ -754,20 +754,20 @@ Acceptance:
 - Tool trace is visible in the UI. (Verified: `InsightPanel` tool-trace section)
 - No arbitrary code execution path exists. (Verified: fixed handler map + shared-secret route)
 
-### Phase 3 — Multimodal evidence (3–4 hours)
+### Phase 3 - Multimodal evidence (3-4 hours) - [COMPLETE]
 
 Tasks:
 
-- [ ] Render PSD, waterfall, constellation, and M-th power images.
-- [ ] Send images before text in the Gemma prompt.
-- [ ] Add “visual second opinion” for low-confidence modulation.
-- [ ] Add image hashes / sizes to the evidence bundle for audit.
+- [x] Render PSD, waterfall, constellation, and M-th power images. (Delivered: `services/api/app/evidence_images.py` with Pillow, no matplotlib)
+- [x] Send images before text in the Gemma prompt. (Delivered: `TransformersBackend._initial_messages` image parts precede the text prompt)
+- [x] Add "visual second opinion" for low-confidence modulation. (Prompt instruction + FakeBackend visual acknowledgement; low-confidence tool loop unchanged)
+- [x] Add image hashes / sizes to the evidence bundle for audit. (Delivered: `evidence_images` audit with mime/bytes/sha256/dimensions)
 
 Acceptance:
 
-- Gemma 4 references visual evidence in at least one conflict or hypothesis.
-- Raw IQ is never sent to the model.
-- Image payload stays under a defined size cap.
+- Gemma 4 references visual evidence in at least one conflict or hypothesis. (Prompt requires a visual second opinion; `FakeBackend` records it in `limitations` and `confidence_note`)
+- Raw IQ is never sent to the model. (API sends PNG data URIs only; AI schema rejects non-image URIs)
+- Image payload stays under a defined size cap. (Per-image `AI_MAX_IMAGE_BYTES`, bundle `AI_MAX_TOTAL_IMAGE_BYTES`)
 
 ### Phase 4 — Rare-signal gallery (optional, 4–6 hours)
 
@@ -827,7 +827,7 @@ Acceptance:
 
 ### DSP tests
 
-- Existing 59 tests still pass.
+- Existing 69 tests still pass.
 - `Source.AI_HYPOTHESIS` serializes correctly.
 
 ### Frontend tests
@@ -926,10 +926,11 @@ The Gemma 4 integration is demo-ready when:
 - [x] A user can generate a cited AI brief from a completed analysis. (Verified: `InsightPanel` and Celery `generate_insight_task`)
 - [x] Every numeric value in the brief is backend-substituted from provenance. (Verified: `render_template` in `services/ai/app/validation.py`)
 - [x] Low-confidence cases trigger at least one real DSP tool call. (Verified: `test_low_confidence_modulation_triggers_follow_up_tool` + private DSP tool route)
+- [x] Multimodal evidence is capped, audited, and never sends raw IQ. (Verified: `test_evidence_images.py`, `test_images.py`, image audit in `generate_insight_task`)
 - [x] AI output is visibly labeled as a hypothesis. (Verified: `ai_hypothesis` badge in UI)
 - [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` chat/vision path ready)
-- [x] Existing DSP, API, and frontend tests pass. (Verified: 59 DSP, 46 API, 14 AI, 26 frontend tests all pass)
-- [ ] README and demo docs state the model, license, and limitations. (Phase 2/3 target)
+- [x] Existing DSP, API, AI, and frontend tests pass. (Verified: 69 DSP, 51 API, 19 AI, 26 frontend tests)
+- [x] README and demo docs state the model, license, and limitations. (Verified: `README.md`, `RUN.md`, `docs/LOCAL_SETUP.md`, `services/ai/README.md`)
 
 ---
 

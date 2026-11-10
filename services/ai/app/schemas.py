@@ -34,6 +34,12 @@ class InsightRequest(BaseModel):
                 _ALLOWED_IMAGE_PREFIXES
             ):
                 raise ValueError(f"image {name!r} is not an image data URI")
+            # Check the encoded size before decoding so a huge body cannot
+            # force a large allocation in the sidecar.
+            if len(data_uri) > settings.AI_MAX_IMAGE_BYTES * 2:
+                raise ValueError(
+                    f"image {name!r} exceeds {settings.AI_MAX_IMAGE_BYTES} byte cap"
+                )
             try:
                 raw = base64.b64decode(data_uri.split(",", 1)[1], validate=True)
             except (ValueError, IndexError) as exc:

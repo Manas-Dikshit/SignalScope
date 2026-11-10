@@ -28,7 +28,7 @@ def test_image_data_uri_is_accepted_and_acknowledged():
     assert any(
         "Visual second opinion reviewed: psd.png" in item for item in result.limitations
     )
-    assert "Visual evidence reviewed." in result.hypothesis.confidence_note
+    assert "Visual evidence reviewed: psd.png" in result.hypothesis.confidence_note
 
 
 def test_non_image_uri_is_rejected():

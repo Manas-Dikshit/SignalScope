@@ -28,9 +28,30 @@ AI_MODEL=google/gemma-4-E4B-it \
 uvicorn app.main:app --host 0.0.0.0 --port 8100
 ```
 
-The Transformers path is a scaffold for Phase 0/1. The tool-calling loop and
-image rendering are added in later phases of
-`docs/GEMMA4_IMPLEMENTATION_PLAN.md`.
+The Transformers path loads the model lazily, so API/worker processes and tests
+never import torch unless `AI_BACKEND=transformers` is selected.
+
+## Phase 3 multimodal evidence
+
+The API worker renders four small PNGs from the bounded project window:
+PSD, waterfall, constellation, and M-th power spectrum. They are sent as
+`data:image/png;base64,...` URIs, never as raw IQ. Each image is capped by
+`AI_MAX_IMAGE_BYTES` (default 300 KB), the bundle by
+`AI_MAX_TOTAL_IMAGE_BYTES` (default 1 MB), and the evidence bundle carries an
+`evidence_images` audit record with `mime`, `bytes`, `sha256`, width, and height.
+The sidecar rejects any image value that is not an allowed image data URI.
+
+Images are placed before the text prompt so Gemma treats them as a visual
+second opinion; the numeric evidence remains authoritative. The FakeBackend
+records the visual review in the hypothesis note and limitations so the path is
+visible without downloading weights.
+
+## Model
+
+`AI_MODEL` defaults to `google/gemma-4-E4B-it` (Apache 2.0). E2B/E4B accept
+text, image, and audio; the 26B/31B variants are text+image only. See
+`docs/GEMMA4_IMPLEMENTATION_PLAN.md` for memory guidance. The deterministic
+`FakeBackend` is the default for tests and offline demos.
 
 ## Phase 2 tool loop
 
