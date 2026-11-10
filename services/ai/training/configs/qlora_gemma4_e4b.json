@@ -1,0 +1,34 @@
+{
+  "model_id": "google/gemma-4-E4B-it",
+  "quantization": {
+    "load_in_4bit": true,
+    "bnb_4bit_quant_type": "nf4",
+    "bnb_4bit_compute_dtype": "bfloat16",
+    "bnb_4bit_use_double_quant": true
+  },
+  "lora": {
+    "r": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ]
+  },
+  "training": {
+    "epochs": 3,
+    "batch_size": 1,
+    "grad_accum": 8,
+    "learning_rate": 0.0002,
+    "max_seq_len": 4096,
+    "bf16": true,
+    "gradient_checkpointing": true,
+    "logging_steps": 10,
+    "save_total_limit": 2
+  }
+}

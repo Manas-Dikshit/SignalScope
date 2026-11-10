@@ -298,7 +298,7 @@ async def deep_analysis(
 
     from signalscope_dsp.io import load_wav, load_raw_iq, RawIQFormat, load_sigmf
     from signalscope_dsp.preprocessing import ConditioningConfig, condition_signal
-    from signalscope_dsp.features import compute_psd, compute_waterfall, extract_spectral_features
+    from signalscope_dsp.features import compute_psd, compute_waterfall, extract_spectral_features, analyze_space_medium
     from signalscope_dsp.modulation import classify_modulation_estimate, estimate_symbol_rate_candidates
     from signalscope_dsp.modulation.classifier import mth_power_spectrum
     from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
@@ -387,6 +387,19 @@ async def deep_analysis(
             ("interferometric_origin", inter_est),
         ]
     }
+
+    # Space-medium & celestial context: scintillation, Doppler-bound drift
+    # verdict, equivalent acceleration, and hydrogen-line velocity when tuned
+    # near 1420 MHz. Each entry is a normal Estimate, so the UI renders it
+    # with provenance like every other feature.
+    space_medium = analyze_space_medium(
+        work, sr, center_frequency_hz=meta.center_frequency if meta else None
+    )
+    for est in space_medium.estimates:
+        features[est.name] = {
+            "value": est.value, "unit": est.unit, "source": est.source.value,
+            "confidence": est.confidence, "evidence": est.evidence, "warnings": est.warnings,
+        }
 
     mod_est = classify_modulation_estimate(work, sr)
     sym_cands = estimate_symbol_rate_candidates(work, sr)

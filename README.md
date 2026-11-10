@@ -8,7 +8,7 @@
 
 Turn authorized WAV, raw I/Q, and SigMF recordings into provenance-tracked estimates — from raw spectrum to demodulated bits — with every number backed by evidence.
 
-[![Tests](https://img.shields.io/badge/tests-188%20passing-2ea44f?style=flat-square)](./RUN.md)
+[![Tests](https://img.shields.io/badge/tests-194%20passing-2ea44f?style=flat-square)](./RUN.md)
 [![Version](https://img.shields.io/badge/version-0.1.0-6f42c1?style=flat-square)](./services/dsp-worker/pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11--3.13-3776AB?style=flat-square&logo=python&logoColor=white)](./services/api/requirements.txt)
@@ -47,7 +47,7 @@ Most signal analyzers print one number and call it truth. SignalScope treats eve
 | **Multi-format ingestion** | WAV (mono or stereo I/Q), raw I/Q (`int8`→`float64`, interleaved / separate-I/Q / real-only), and SigMF `-meta` + `-data` pairs. Uploads are streamed, hashed, deduplicated, and capped at 200 MB. |
 | **Provenance-first DSP** | Occupied bandwidth, peak/centroid frequency, spectral flatness, crest factor, zero-crossing rate, SNR, frequency drift, burst statistics, modulation hypotheses, symbol-rate candidates, and bit-level results. |
 | **Interactive workspace** | Waveform and I/Q scatter with ROI selection, PSD, waterfall, burst timeline, ranked modulation/symbol-rate candidates, confidence badges, and downloadable proof JSON. |
-| **Deep analysis** | Capped-window deep dive with modulation proof spectra, de-interleaving candidates (block, convolutional, diagonal, pseudo-random), selectable FEC, CRC checks, and repeated-sequence correlation. |
+| **Deep analysis** | Capped-window deep dive with modulation proof spectra, de-interleaving candidates (block, convolutional, diagonal, pseudo-random), selectable FEC, CRC checks, and repeated-sequence correlation. Plus a **space-medium & celestial-context report**: scintillation index (S4) and fading rate as a space-weather indicator, the measured drift verdict against the Earth-rotation Doppler bound (sky motion vs instrumental/terrestrial), equivalent line-of-sight acceleration, and hydrogen-line radial velocity when tuned near 1420 MHz. |
 | **Interferometric origin** | Dual/multi-antenna raw-IQ frames can be classified as `sky`, `near_field_observatory`, or `inconclusive` from cross-spectral coherence and phase-slope delay. Optional `baseline_m` enables a far-field bearing check. |
 | **FEC lab** | Hard-decision Viterbi (rate-1/2 convolutional), Reed–Solomon with erasures, LDPC belief propagation, and concatenated RS + convolutional decoding — each reporting corrected symbols, stage failures, and CRC validity. |
 | **Demo signal lab** | One-click QPSK, 2-FSK, 16-QAM, BPSK burst, and 8-PSK recordings in the dashboard and recording library. |
@@ -260,7 +260,7 @@ Every estimate is an object, never a bare number:
 
 **Sources** are explicit: `metadata`, `user_supplied`, `measured`, `estimated`, `hypothesis`, `ai_hypothesis`, `unknown`. The UI colour-codes confidence and lets you expand the evidence behind every claim.
 
-**Pipeline stages** — load → condition → PSD/waterfall → spectral features → burst detection → modulation classification → symbol-rate estimation → interferometric origin → demodulation → de-interleaving → FEC decoding → bit correlation → provenance assembly.
+**Pipeline stages** — load → condition → PSD/waterfall → spectral features → burst detection → modulation classification → symbol-rate estimation → interferometric origin → demodulation → de-interleaving → FEC decoding → bit correlation → space-medium & celestial context → provenance assembly.
 
 ---
 
@@ -295,12 +295,12 @@ All four suites:
 
 | Suite | Command | Tests |
 |---|---|---:|
-| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | **74** |
+| DSP core | `cd services/dsp-worker && python -m pytest tests/ -q` | **80** |
 | API | `cd services/api && python -m pytest tests/ -q` | **63** |
 | AI sidecar | `cd services/ai && python -m pytest tests/ -q` | **22** |
 | Frontend | `cd apps/web && npm test` | **29** |
 
-Coverage includes WAV/raw-IQ/SigMF loading, bounded windows, dual-antenna frames, interferometric origin verdicts, modulation/demodulation BER round trips, symbol-rate estimation, de-interleaving, convolutional/Reed–Solomon/LDPC/concatenated FEC, CRC, proof spectra, kHz–GHz band coverage, auth, uploads, projects, jobs, cross-user isolation, demo samples, evidence images, AI validation/tool-loop behavior, celestial candidate prioritization, provenance badges, and formatting utilities.
+Coverage includes WAV/raw-IQ/SigMF loading, bounded windows, dual-antenna frames, interferometric origin verdicts, modulation/demodulation BER round trips, symbol-rate estimation, de-interleaving, convolutional/Reed–Solomon/LDPC/concatenated FEC, CRC, proof spectra, kHz–GHz band coverage, space-medium/celestial context (scintillation, Doppler-bound drift verdicts, hydrogen-line velocity), auth, uploads, projects, jobs, cross-user isolation, demo samples, evidence images, AI validation/tool-loop behavior, celestial candidate prioritization, provenance badges, and formatting utilities.
 
 Run the API suite inside Docker:
 
@@ -358,6 +358,7 @@ SignalScope/
 - [x] Interferometric origin discrimination from dual-antenna IQ
 - [x] Demo signal library and app-shell UI
 - [x] Gemma 4 cited brief, agent tool loop, and multimodal evidence images
+- [x] Space-medium & celestial-context report (S4 scintillation, Earth-rotation Doppler-bound drift verdict, hydrogen-line radial velocity)
 - [x] Rare-signal gallery / fingerprint similarity search
 - [x] Scientific candidate prioritization for celestial signals (novelty, repeatability, astrophysical plausibility, follow-up feasibility)
 - [ ] QLoRA fine-tuning on synthetic RF evidence pairs
