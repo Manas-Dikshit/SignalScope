@@ -25,7 +25,9 @@ def test_image_data_uri_is_accepted_and_acknowledged():
         project_id="p1", evidence=EVIDENCE, images={"psd.png": PNG_1X1}
     )
     result = run_analyst(request)
-    assert any("Visual evidence reviewed: psd.png" in item for item in result.limitations)
+    assert any(
+        "Visual second opinion reviewed: psd.png" in item for item in result.limitations
+    )
     assert "Visual evidence reviewed." in result.hypothesis.confidence_note
 
 
