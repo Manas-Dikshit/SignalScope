@@ -16,6 +16,7 @@ build/
 .venv/
 venv/
 *.db
+*.db-journal
 *.sqlite3
 
 # Testing / coverage

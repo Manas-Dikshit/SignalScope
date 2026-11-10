@@ -30,3 +30,9 @@ def test_load_sigmf(tmp_path):
     assert rec.metadata.sample_rate.value == 1_000_000
     assert rec.metadata.center_frequency.value == 915_000_000
     assert len(rec.samples) == n
+
+    window = load_sigmf(meta_path, sample_offset=100, max_samples=25)
+    assert len(window.samples) == 25
+    assert window.metadata.total_samples == n
+    assert window.samples[0].real == np.float32(i[100])
+    assert window.samples[0].imag == np.float32(q[100])
