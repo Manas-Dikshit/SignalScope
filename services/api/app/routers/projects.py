@@ -364,7 +364,6 @@ async def deep_analysis(
 
     feats = extract_spectral_features(work, sr)
 
-    from signalscope_dsp.preprocessing import ConditioningConfig
     _inter_cfg = ConditioningConfig(remove_dc_offset=True, normalize=True)
     _inter_other = [
         condition_signal(a[: len(work)], sr, _inter_cfg).samples for a in loaded.other_channels
@@ -385,6 +384,7 @@ async def deep_analysis(
             ("zero_crossing_rate", feats.zero_crossing_rate),
             ("snr_db", feats.snr_db),
             ("frequency_drift_rate", feats.frequency_drift_rate),
+            ("interferometric_origin", inter_est),
         ]
     }
 

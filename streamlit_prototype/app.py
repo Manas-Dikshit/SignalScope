@@ -22,6 +22,7 @@ from signalscope_dsp.preprocessing import ConditioningConfig, condition_signal, 
 from signalscope_dsp.features import compute_psd, compute_waterfall, extract_spectral_features
 from signalscope_dsp.detection import detect_bursts, burst_stats
 from signalscope_dsp.modulation import classify_modulation, estimate_symbol_rate_candidates
+from signalscope_dsp.interferometry import interferometric_origin
 from signalscope_dsp.demodulation import demod_psk, demod_qam, demod_fsk
 from signalscope_dsp.interleaving.block import (
     block_deinterleave, convolutional_deinterleave, score_deinterleave_candidate,
@@ -466,6 +467,32 @@ with tabs[4]:
         with c1:
             render_estimate("Frequency drift rate", feats.frequency_drift_rate, " Hz/s")
         _graph_expander(plot_feature_profile(feats))
+    else:
+        st.warning("Sample rate unknown — spectral features cannot be computed.")
+
+    st.subheader("Interferometric origin (multi-antenna)")
+    st.caption("Cross-correlates simultaneous antenna channels to decide whether "
+               "the dominant signal follows a single sky-consistent propagation "
+               "path or looks local to the observatory.")
+    if fs:
+        baseline_m_input = st.sidebar.number_input("Baseline between antennas (m, 0 = unknown)",
+                                                   value=0.0, step=10.0, key="interf_baseline")
+        baseline_m = baseline_m_input if baseline_m_input > 0 else None
+        n_ap = 1 + len(rec.other_channels)
+        if n_ap >= 2:
+            inter_cfg = ConditioningConfig(remove_dc_offset=True, normalize=True)
+            antennas = [condition_signal(segment, fs, inter_cfg).samples]
+            antennas += [
+                condition_signal(rec.other_channels[c][start_sample:end_sample], fs, inter_cfg).samples
+                for c in range(n_ap - 1)
+            ]
+            inter_est = interferometric_origin(antennas, fs, baseline_m=baseline_m)
+            render_estimate("Interferometric origin", inter_est)
+        else:
+            st.info(f"Single-antenna recording loaded ({n_ap} channel(s)). A multi-channel "
+                    "raw IQ file (channels=2) enables the interferometric verdict.")
+    else:
+        st.warning("Sample rate unknown — interferometric origin cannot be estimated.")
 
 with tabs[5]:
     st.subheader("Modulation classification")
