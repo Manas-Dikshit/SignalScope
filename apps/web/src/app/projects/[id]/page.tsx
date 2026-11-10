@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import type { Data } from "plotly.js-dist-min";
 
-const FEATURE_RANGES: Record<string, { label: string; unit?: string; min: number; max: number }> = {
+const FEATURE_RANGES: Record<string, { label: string; unit?: string; min?: number; max?: number }> = {
   occupied_bandwidth: { label: "Occupied Bandwidth", unit: "Hz", min: 0, max: 10_000_000 },
   peak_frequency: { label: "Peak Frequency", unit: "Hz", min: 0, max: 10_000_000 },
   spectral_centroid: { label: "Spectral Centroid", unit: "Hz", min: 0, max: 10_000_000 },
@@ -43,6 +43,12 @@ const FEATURE_RANGES: Record<string, { label: string; unit?: string; min: number
   crest_factor: { label: "Crest Factor", min: 0, max: 20 },
   zero_crossing_rate: { label: "Zero-Crossing Rate", min: 0, max: 1 },
   snr: { label: "Estimated SNR", unit: "dB", min: -10, max: 60 },
+  scintillation_index_s4: { label: "Scintillation Index (S4)", min: 0, max: 1 },
+  fading_rate: { label: "Fading Rate", unit: "Hz", min: 0, max: 50 },
+  drift_celestial_verdict: { label: "Drift vs Celestial Bound" },
+  earth_rotation_doppler_bound: { label: "Earth-Rotation Doppler Bound", unit: "Hz/s", min: 0, max: 10 },
+  equivalent_line_of_sight_acceleration: { label: "Doppler Acceleration", unit: "m/s²" },
+  hydrogen_line_radial_velocity: { label: "H-Line Radial Velocity", unit: "km/s", min: -600, max: 600 },
 };
 
 function WarningList({ warnings }: { warnings: string[] }) {

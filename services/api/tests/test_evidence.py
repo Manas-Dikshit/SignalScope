@@ -45,6 +45,12 @@ async def test_deep_analysis_returns_proof_spectra(client: AsyncClient, auth_hea
     assert data["fec"]["fec_type"] == "convolutional"
     assert "path_metric" in data["fec"] or data["fec"]["path_metric"] is None
 
+    # Space-medium & celestial context rides along as normal features.
+    for name in ("scintillation_index_s4", "fading_rate", "drift_celestial_verdict",
+                 "earth_rotation_doppler_bound", "equivalent_line_of_sight_acceleration"):
+        assert name in data["features"], f"missing space-medium feature: {name}"
+        assert "evidence" in data["features"][name]
+
 
 @pytest.mark.asyncio
 async def test_deep_analysis_fec_type_dispatch(client: AsyncClient, auth_headers: dict):
