@@ -1,6 +1,8 @@
 """Interferometric origin: a sky plane wave delivers a shared single-path
 signal; multipath, excess delay, and unshared noise deliver the local /
 inconclusive verdicts. Also covers the 2-antenna raw-IQ frame format."""
+import re
+
 import numpy as np
 
 from signalscope_dsp.interferometry import interferometric_origin, SKY, NEAR_FIELD, INCONCLUSIVE
@@ -42,9 +44,8 @@ def test_sky_plane_wave_single_path():
     assert est.confidence is not None and est.confidence > 0.5
     joined = " ".join(est.evidence)
     # delay sign depends on which antenna leads; magnitude and bearing matter
-    import re
-    ns = [float(m) for m in re.findall(r" ([\d.]+) ns", joined)]
-    assert ns and abs(ns[0] - tau * 1e9) < 0.5 * tau * 1e9
+    delay_match = re.search(r"Interferometric delay: (-?[\d.]+) ns", joined)
+    assert delay_match and abs(abs(float(delay_match.group(1))) - tau * 1e9) < 0.5 * tau * 1e9
     assert "30.0 deg off baseline broadside" in joined
     assert "Coherence above the 0.25 threshold" in joined
     assert est.warnings == []
