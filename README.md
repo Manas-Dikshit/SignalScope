@@ -364,7 +364,7 @@ SignalScope/
 
 | Document | What it covers |
 |---|---|
-| [`RUN.md`](./RUN.md) | Three ways to run the stack, smoke test, troubleshooting |
+| [`RUN.md`](./RUN.md) | Run modes (Docker/native/tests/AI), smoke test, troubleshooting |
 | [`ARCHITECTURE.md`](./ARCHITECTURE.md) | System design, layers, sequence flow, deployment topology |
 | [`detailedarch.md`](./detailedarch.md) | Low-level service, port, data-store, and DSP-stage view |
 | [`docs/LOCAL_SETUP.md`](./docs/LOCAL_SETUP.md) | Local Docker/native setup and configuration reference |
