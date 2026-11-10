@@ -369,6 +369,7 @@ async def deep_analysis(
             ("crest_factor", feats.crest_factor),
             ("zero_crossing_rate", feats.zero_crossing_rate),
             ("snr_db", feats.snr_db),
+            ("frequency_drift_rate", feats.frequency_drift_rate),
         ]
     }
 
