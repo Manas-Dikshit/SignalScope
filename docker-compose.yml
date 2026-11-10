@@ -49,6 +49,11 @@ services:
       CORS_ORIGINS: http://localhost:3000
       CELERY_BROKER_URL: redis://redis:6379/1
       CELERY_RESULT_BACKEND: redis://redis:6379/2
+      AI_ENABLED: ${AI_ENABLED:-false}
+      AI_SERVICE_URL: ${AI_SERVICE_URL:-http://ai:8100}
+      AI_MODEL: ${AI_MODEL:-google/gemma-4-E4B-it}
+      AI_TIMEOUT_SECONDS: ${AI_TIMEOUT_SECONDS:-120}
+      AI_PROMPT_VERSION: ${AI_PROMPT_VERSION:-2026-11-01}
     ports:
       - "8000:8000"
     volumes:

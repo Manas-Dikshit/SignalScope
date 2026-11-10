@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
     CORS_ORIGINS: str = "http://localhost:3000"
 
+    # Optional local Gemma 4 sidecar. Disabled by default so the deterministic
+    # DSP/API stack runs exactly as before.
+    AI_ENABLED: bool = False
+    AI_SERVICE_URL: str = "http://ai:8100"
+    AI_MODEL: str = "google/gemma-4-E4B-it"
+    AI_TIMEOUT_SECONDS: float = 120.0
+    AI_PROMPT_VERSION: str = "2026-11-01"
+
     # `CORS_ORIGINS` is a string env var (comma-separated or JSON array).
     # Kept as `str` so pydantic-settings doesn't force JSON decoding of
     # complex-typed env vars across versions.
