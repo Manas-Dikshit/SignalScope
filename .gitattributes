@@ -1,0 +1,4 @@
+# Keep shell entrypoints LF-only. With core.autocrlf=true on Windows, a CRLF
+# shebang becomes "#!/bin/sh\r" and containers fail with
+# "exec /app/entrypoint-api.sh: no such file or directory".
+*.sh text eol=lf
