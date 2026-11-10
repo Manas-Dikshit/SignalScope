@@ -112,7 +112,7 @@ def _waterfall_image(samples: np.ndarray, sample_rate: float) -> Image.Image:
     freq_step = max(1, n_freq // 160)
     time_step = max(1, n_time // 240)
     trimmed = spectrogram_db[::freq_step, ::time_step]
-    grey = Image.fromarray(_to_uint8(trimmed), mode="L").resize(
+    grey = Image.fromarray(_to_uint8(trimmed)).resize(
         (WIDTH - 24, HEIGHT - TITLE_HEIGHT - 24)
     )
     image, draw = _new_canvas("Waterfall (dB)")

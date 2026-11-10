@@ -61,13 +61,25 @@ def deterministic_payload(evidence: dict[str, Any]) -> dict[str, Any]:
     if snr:
         citations["snr_db"] = "parameter_estimates.snr_db"
 
-    summary = (
-        "DSP evidence currently supports {{estimate:modulation}} at "
-        "{{estimate:symbol_rate}}. The estimate is a hypothesis, not a "
-        "guarantee; review the linked provenance before acting on it."
-    )
-
-    if not citations:
+    if modulation and symbol_rate:
+        summary = (
+            "DSP evidence currently supports {{estimate:modulation}} at "
+            "{{estimate:symbol_rate}}. The estimate is a hypothesis, not a "
+            "guarantee; review the linked provenance before acting on it."
+        )
+    elif modulation:
+        summary = (
+            "DSP evidence currently supports {{estimate:modulation}}. The "
+            "estimate is a hypothesis, not a guarantee; review the linked "
+            "provenance before acting on it."
+        )
+    elif symbol_rate:
+        summary = (
+            "DSP evidence shows activity at {{estimate:symbol_rate}}. The "
+            "estimate is a hypothesis, not a guarantee; review the linked "
+            "provenance before acting on it."
+        )
+    else:
         summary = "No DSP estimates are available yet. Run parameter estimation first."
 
     anomalies: list[dict[str, Any]] = []
