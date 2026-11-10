@@ -8,7 +8,7 @@
 
 Turn authorized WAV, raw I/Q, and SigMF recordings into provenance-tracked estimates — from raw spectrum to demodulated bits — with every number backed by evidence.
 
-[![Tests](https://img.shields.io/badge/tests-165%20passing-2ea44f?style=flat-square)](./RUN.md)
+[![Tests](https://img.shields.io/badge/tests-188%20passing-2ea44f?style=flat-square)](./RUN.md)
 [![Version](https://img.shields.io/badge/version-0.1.0-6f42c1?style=flat-square)](./services/dsp-worker/pyproject.toml)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](./LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.11--3.13-3776AB?style=flat-square&logo=python&logoColor=white)](./services/api/requirements.txt)

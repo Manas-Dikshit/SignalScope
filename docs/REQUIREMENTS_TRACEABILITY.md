@@ -39,7 +39,7 @@ implementation.
 
 | # | Requirement | Status | Where | Verification |
 |---|-------------|--------|-------|--------------|
-| 20 | Optional local Gemma 4 analyst produces a cited brief over DSP evidence | Done | `services/ai` (`/v1/insight`), `services/api/app/tasks.py::generate_insight_task`, `routers/insights.py`, `InsightPanel.tsx` | `services/ai/tests/test_agent.py` (14), `services/api/tests/test_insights.py` (5) |
+| 20 | Optional local Gemma 4 analyst produces a cited brief over DSP evidence | Done | `services/ai` (`/v1/insight`), `services/api/app/tasks.py::generate_insight_task`, `routers/insights.py`, `InsightPanel.tsx` | `services/ai/tests/test_agent.py` (17), `services/api/tests/test_insights.py` (5) |
 | 21 | AI output is labelled `ai_hypothesis` and numbers are backend-substituted | Done | `signalscope_dsp.common.Source.AI_HYPOTHESIS`; `services/ai/app/validation.py` `render_template` + numeric guard; `ProvenanceBadge.tsx` | `services/ai/tests/test_agent.py`, `apps/web` `ProvenanceBadge.test.tsx` |
 | 22 | Agent may only call allowlisted DSP tools with bounded steps/timeouts | Done | `services/ai/app/tools.py`; private `routers/internal_tools.py` route; `AI_MAX_TOOL_STEPS` + `AI_TOOL_TIMEOUT_SECONDS` | `services/ai/tests/test_agent.py` (low-confidence follow-up, max-step, timeout), `services/api/tests/test_internal_tools.py` (7) |
 | 23 | Multimodal evidence images are bounded, audited, and never raw IQ | Done | `services/api/app/evidence_images.py` renders PSD/waterfall/constellation/M-th-power PNGs with Pillow; audit stores MIME, bytes, SHA-256, dimensions | `services/api/tests/test_evidence_images.py` (5) |
@@ -64,5 +64,5 @@ implementation.
   recorded in docs. No other claimed requirement is silently dropped — what is
   partial is labelled (e.g. symbol-clock proof is produced for the full-file
   job, while the interactive endpoint proves modulation only to keep GET fast).
-- **Current suites:** 69 DSP, 51 API, 19 AI, 26 frontend (165 total). See
+- **Current suites:** 74 DSP, 63 API, 22 AI, 29 frontend (188 total). See
   `RUN.md` for commands; AI and API rows above map directly to those tests.

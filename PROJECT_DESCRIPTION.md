@@ -536,11 +536,11 @@ to the file in the repository, in case the renderer blocks remote images.
 
 | Suite | Tests | Command |
 |---|---:|---|
-| DSP core | 69 | `cd services/dsp-worker && python -m pytest tests/ -q` |
-| API | 51 | `cd services/api && python -m pytest tests/ -q` |
-| AI sidecar | 19 | `cd services/ai && python -m pytest tests/ -q` |
-| Frontend | 26 | `cd apps/web && npm test` |
-| **Total** | **165** | |
+| DSP core | 74 | `cd services/dsp-worker && python -m pytest tests/ -q` |
+| API | 63 | `cd services/api && python -m pytest tests/ -q` |
+| AI sidecar | 22 | `cd services/ai && python -m pytest tests/ -q` |
+| Frontend | 29 | `cd apps/web && npm test` |
+| **Total** | **188** | |
 
 Coverage includes:
 

@@ -1034,7 +1034,7 @@ The Gemma 4 integration is demo-ready when:
 - [x] A rare-signal gallery compares the project against the user's own fingerprinted projects. (Verified: `GET /api/projects/{id}/similar`, `SimilarSignalsPanel.tsx`)
 - [x] Similarity is never presented as identification, and an empty gallery does not claim rarity. (Verified: `rare_signal: null` + comparative AI wording)
 - [x] The demo runs fully offline with a local Gemma 4 model or deterministic fallback. (Verified: `FakeBackend` offline, `TransformersBackend` chat/vision path ready)
-- [x] Existing DSP, API, AI, and frontend tests pass. (Verified: 74 DSP, 58 API, 22 AI, 29 frontend tests)
+- [x] Existing DSP, API, AI, and frontend tests pass. (Verified: 74 DSP, 63 API, 22 AI, 29 frontend tests)
 - [x] README and demo docs state the model, license, and limitations. (Verified: `README.md`, `RUN.md`, `docs/LOCAL_SETUP.md`, `services/ai/README.md`)
 
 ---
