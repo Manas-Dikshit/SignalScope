@@ -127,6 +127,16 @@ def estimate_parameters_task(self, project_id_str: str):
         bursts = detect_bursts(conditioned, sr)
         b_stats = burst_stats(bursts)
 
+        _update_progress(self, "interferometric_origin", 88)
+        from signalscope_dsp.interferometry import interferometric_origin
+        baseline_m = baseline_m if isinstance(baseline_m, (int, float)) else None
+        other_antennas = [
+            condition_signal(a[start_s:end_s], sr, cfg).samples for a in loaded.other_channels
+        ]
+        interf_est = interferometric_origin(
+            [conditioned, *other_antennas], sr, baseline_m=baseline_m
+        )
+
         _update_progress(self, "persisting_results", 90)
 
         # Delete old estimates
@@ -142,6 +152,7 @@ def estimate_parameters_task(self, project_id_str: str):
             features.zero_crossing_rate,
             features.snr_db,
             features.frequency_drift_rate,
+            interf_est,
             mod_est,
             *sym_rates,
         ]
